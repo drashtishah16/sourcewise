@@ -229,3 +229,4 @@ class BrandEngine:
         score = max(0, min(100, score))
 
         return score, checks
+

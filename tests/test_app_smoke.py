@@ -84,3 +84,4 @@ def test_full_application_lifecycle_smoke():
     json_export = ExportService.to_json(saved_drafts, doc)
     assert len(json_export) > 100
     assert '"total_drafts": 3' in json_export
+

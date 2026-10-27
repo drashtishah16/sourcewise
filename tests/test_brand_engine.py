@@ -92,3 +92,4 @@ def test_overall_evaluation_and_score(sample_brand):
     score, checks = BrandEngine.evaluate_draft(compliant_draft, sample_brand)
     assert score >= 90
     assert all(c.status != "FAIL" for c in checks)
+

@@ -63,3 +63,4 @@ def test_llm_interface_fallback_without_keys(processed_doc, brand_profile):
     assert "Demo Mode" in result.message
     assert len(result.drafts) == 1
     assert result.drafts[0].generation_mode == "demo"
+

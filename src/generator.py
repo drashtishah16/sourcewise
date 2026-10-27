@@ -335,3 +335,4 @@ class LLMProviderInterface:
                 mode_used="demo",
                 message=f"Connected provider error ({str(e)}). Safely fell back to deterministic Demo Mode."
             )
+

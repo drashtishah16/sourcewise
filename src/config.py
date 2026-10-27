@@ -81,3 +81,4 @@ def is_connected_mode_available() -> bool:
 def get_app_env() -> str:
     """Returns current environment ('development' or 'production')."""
     return get_secret_or_env("APP_ENV", "development").lower()
+

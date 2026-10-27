@@ -612,3 +612,4 @@ class DatabaseManager:
             except Exception as e:
                 session.rollback()
                 return False, f"Failed to delete draft: {str(e)[:100]}"
+

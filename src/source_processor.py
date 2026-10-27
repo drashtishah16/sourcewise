@@ -211,3 +211,4 @@ class SourceProcessor:
     def compute_hash(text: str) -> str:
         """Computes a SHA256 checksum of source text for change detection."""
         return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()
+

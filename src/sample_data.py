@@ -48,3 +48,4 @@ SAMPLE_BRAND_PROFILE: Dict[str, Any] = {
         "video_seconds": 60
     }
 }
+

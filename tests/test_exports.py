@@ -115,3 +115,4 @@ def test_credential_leak_safety(sample_export_data):
     for dangerous in ["postgres://", "password=", "secret", "bearer", "api_key"]:
         assert dangerous not in csv_str.lower()
         assert dangerous not in json_str.lower()
+

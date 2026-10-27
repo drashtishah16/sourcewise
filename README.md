@@ -205,3 +205,4 @@ The application includes pre-loaded sample data clearly marked as fictional:
 ## 📄 License
 
 This project is developed as part of the internship assessment requirements. Licensed under the MIT License.
+

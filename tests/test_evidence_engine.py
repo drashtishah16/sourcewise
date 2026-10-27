@@ -145,3 +145,4 @@ def test_disclaimer_scope_notice():
     assert "Evidence Traceability Notice" in note
     assert "textual alignment" in note
     assert "external real-world truth" in note
+

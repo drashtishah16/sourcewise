@@ -903,3 +903,4 @@ elif page == "⚙️ System Settings":
         st.session_state.clear()
         st.success("Session state cleared.")
         st.rerun()
+

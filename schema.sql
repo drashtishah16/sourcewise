@@ -105,3 +105,4 @@ CREATE TABLE IF NOT EXISTS review_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_review_events_draft ON review_events(draft_id);
+

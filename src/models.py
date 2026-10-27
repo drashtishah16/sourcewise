@@ -261,3 +261,4 @@ class ReviewEventModel(Base):
     timestamp = Column(DateTime(timezone=True), default=utc_now)
 
     draft = relationship("ContentDraftModel", back_populates="review_events")
+

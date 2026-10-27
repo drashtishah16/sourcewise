@@ -115,3 +115,4 @@ Automated checks are powerful filters, but they cannot replace human judgment:
 | **Rule-Based Metric Audit** | Zero-latency, zero-cost deterministic verification | Combine regex matching with an optional cross-encoder embedding model |
 | **Single-User Session** | Scoped appropriately for an internship assessment | Add Supabase Auth (Row-Level Security) for multi-tenant enterprise teams |
 | **Static Video Script** | Generates formatted script text and visual cues | Integrate with ElevenLabs and HeyGen APIs for automated synthetic video rendering |
+

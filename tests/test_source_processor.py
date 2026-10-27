@@ -65,3 +65,4 @@ def test_injection_neutralization():
     doc = SourceProcessor.process_source("Test Injection", suspicious_text)
     assert doc.passage_count >= 2
     assert any("Ignore all previous instructions" in p.text for p in doc.passages)
+

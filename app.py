@@ -55,86 +55,171 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom SaaS Styling (Clean, professional, high-contrast palette)
+# Custom SaaS Styling (Unique Dark Sidebar with Modern High-Contrast Canvas)
 st.markdown("""
 <style>
     /* Global Layout & Typography */
-    .main {
+    .stApp {
         background-color: #f8fafc;
         color: #0f172a;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     
-    /* Sidebar Styling */
-    div[data-testid="stSidebar"] {
-        background-color: #ffffff;
-        border-right: 1px solid #e2e8f0;
+    /* Top Header Bar */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+    }
+
+    /* ==========================================================================
+       UNIQUE OBSIDIAN SAAS SIDEBAR
+       ========================================================================== */
+    section[data-testid="stSidebar"] {
+        background-color: #0b0f19 !important;
+        border-right: 1px solid #1e293b !important;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #94a3b8;
     }
     
-    .sidebar-brand {
+    .sw-sidebar-brand {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        padding: 0.5rem 0rem 1.25rem 0rem;
-        border-bottom: 1px solid #e2e8f0;
+        gap: 0.85rem;
+        padding: 0.75rem 0.25rem 1.25rem 0.25rem;
+        border-bottom: 1px solid #1e293b;
         margin-bottom: 1.25rem;
     }
-    .brand-avatar {
-        width: 36px;
-        height: 36px;
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: #ffffff;
-        border-radius: 8px;
+    .sw-brand-icon {
+        width: 38px;
+        height: 38px;
+        background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
+        color: #ffffff !important;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 700;
-        font-size: 1.1rem;
-        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+        font-weight: 800;
+        font-size: 1.15rem;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.15);
     }
-    .brand-title {
+    .sw-brand-text {
+        display: flex;
+        flex-direction: column;
+    }
+    .sw-brand-name {
         font-size: 1.15rem;
         font-weight: 700;
-        color: #0f172a;
-        letter-spacing: -0.02em;
+        color: #f8fafc !important;
+        letter-spacing: -0.025em;
         line-height: 1.2;
-    }
-    .brand-tagline {
-        font-size: 0.75rem;
-        color: #64748b;
-        font-weight: 500;
-        margin-top: 1px;
-    }
-
-    /* Modern Navigation Radio Tabs */
-    div[data-testid="stSidebar"] .stRadio > div {
-        gap: 0.25rem;
-    }
-    div[data-testid="stSidebar"] .stRadio label {
         display: flex;
         align-items: center;
-        padding: 0.6rem 0.85rem;
-        border-radius: 6px;
-        font-size: 0.9rem;
+        gap: 0.4rem;
+    }
+    .sw-brand-badge {
+        font-size: 0.65rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #2563eb, #7c3aed);
+        color: #ffffff !important;
+        padding: 0.15rem 0.45rem;
+        border-radius: 4px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+    .sw-brand-sub {
+        font-size: 0.75rem;
+        color: #64748b !important;
         font-weight: 500;
-        color: #334155;
-        transition: all 0.15s ease-in-out;
-        cursor: pointer;
+        margin-top: 2px;
     }
-    div[data-testid="stSidebar"] .stRadio label:hover {
-        background-color: #f1f5f9;
-        color: #0f172a;
+
+    .sw-nav-section-title {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #475569 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 0.5rem 0.6rem 0.35rem 0.6rem;
+        margin-top: 0.25rem;
     }
-    /* Hide native radio circles */
-    div[data-testid="stSidebar"] .stRadio label > div:first-child {
+
+    /* Unique Navigation Items */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] > div {
+        gap: 0.35rem;
+    }
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"] {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        padding: 0.65rem 0.9rem !important;
+        border-radius: 8px !important;
+        background-color: transparent !important;
+        transition: all 0.15s ease-in-out !important;
+        cursor: pointer !important;
+        border: 1px solid transparent !important;
+    }
+    /* Hide the default radio circle */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
         display: none !important;
     }
-    /* Active Navigation State */
-    div[data-testid="stSidebar"] .stRadio label:has(input:checked) {
-        background-color: #eff6ff;
-        color: #1d4ed8;
+    /* Navigation typography */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p {
+        font-size: 0.9rem !important;
+        font-weight: 500 !important;
+        color: #94a3b8 !important;
+        margin: 0 !important;
+        transition: color 0.15s ease !important;
+    }
+    /* Hover State */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-color: rgba(255, 255, 255, 0.05) !important;
+    }
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"]:hover div[data-testid="stMarkdownContainer"] p {
+        color: #f1f5f9 !important;
+    }
+    /* Active Selected State */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {
+        background: linear-gradient(90deg, rgba(37, 99, 235, 0.18) 0%, rgba(99, 102, 241, 0.08) 100%) !important;
+        border: 1px solid rgba(59, 130, 246, 0.3) !important;
+        border-left: 3px solid #3b82f6 !important;
+    }
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) div[data-testid="stMarkdownContainer"] p {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+
+    /* Sidebar Footer */
+    .sw-sidebar-footer {
+        margin-top: 2.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #1e293b;
+    }
+    .sw-footer-card {
+        background: rgba(30, 41, 59, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 0.75rem 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
+    .sw-footer-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #10b981;
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+    .sw-footer-text {
+        font-size: 0.75rem;
+        color: #94a3b8 !important;
+        line-height: 1.3;
+    }
+    .sw-footer-title {
         font-weight: 600;
-        border-left: 3px solid #2563eb;
+        color: #f1f5f9 !important;
     }
 
     /* Top Page Header */
@@ -283,43 +368,57 @@ init_session_state()
 
 
 # ==============================================================================
-# SIDEBAR NAVIGATION (POLISHED SAAS INTERFACE)
+# SIDEBAR NAVIGATION (UNIQUE OBSIDIAN SAAS INTERFACE)
 # ==============================================================================
 
 with st.sidebar:
     st.markdown("""
-    <div class="sidebar-brand">
-        <div class="brand-avatar">S</div>
-        <div>
-            <div class="brand-title">SourceWise AI</div>
-            <div class="brand-tagline">Traceable Content Repurposing</div>
+    <div class="sw-sidebar-brand">
+        <div class="sw-brand-icon">
+            <span>S</span>
+        </div>
+        <div class="sw-brand-text">
+            <div class="sw-brand-name">SourceWise <span class="sw-brand-badge">AI</span></div>
+            <div class="sw-brand-sub">Traceable Repurposing</div>
         </div>
     </div>
+    <div class="sw-nav-section-title">PLATFORM NAVIGATION</div>
     """, unsafe_allow_html=True)
 
-    page = st.radio(
+    nav_options = [
+        "⊞  Workspace",
+        "✦  Create Content",
+        "⚲  Evidence Review",
+        "▤  Content Library",
+        "◎  Brand Settings",
+        "⚙  Engine & Settings"
+    ]
+
+    selected_nav = st.radio(
         "Navigation",
-        [
-            "Workspace",
-            "Create Content",
-            "Evidence Review",
-            "Content Library",
-            "Brand Settings",
-            "System Settings"
-        ],
+        nav_options,
         index=0,
         label_visibility="collapsed"
     )
 
-    st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
-    st.caption("SourceWise AI • Enterprise SaaS")
+    st.markdown("""
+    <div class="sw-sidebar-footer">
+        <div class="sw-footer-card">
+            <div class="sw-footer-dot"></div>
+            <div class="sw-footer-text">
+                <div class="sw-footer-title">Workspace Active</div>
+                <div>SourceWise Studio • Ready</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ==============================================================================
 # 1. WORKSPACE PAGE
 # ==============================================================================
 
-if page == "Workspace":
+if "Workspace" in selected_nav:
     st.markdown("""
     <div class="app-header">
         <h1 class="app-title">Workspace Overview</h1>
@@ -412,7 +511,7 @@ if page == "Workspace":
 # 2. CREATE CONTENT PAGE
 # ==============================================================================
 
-elif page == "Create Content":
+elif "Create Content" in selected_nav:
     st.markdown("""
     <div class="app-header">
         <h1 class="app-title">Create Repurposed Content</h1>
@@ -603,7 +702,7 @@ elif page == "Create Content":
 # 3. EVIDENCE REVIEW PAGE
 # ==============================================================================
 
-elif page == "Evidence Review":
+elif "Evidence Review" in selected_nav:
     st.markdown("""
     <div class="app-header">
         <h1 class="app-title">Evidence Review & Traceability Workbench</h1>
@@ -708,7 +807,7 @@ elif page == "Evidence Review":
 # 4. CONTENT LIBRARY PAGE
 # ==============================================================================
 
-elif page == "Content Library":
+elif "Content Library" in selected_nav:
     st.markdown("""
     <div class="app-header">
         <h1 class="app-title">Content Library & Exports</h1>
@@ -800,7 +899,7 @@ elif page == "Content Library":
 # 5. BRAND SETTINGS PAGE
 # ==============================================================================
 
-elif page == "Brand Settings":
+elif "Brand Settings" in selected_nav:
     st.markdown("""
     <div class="app-header">
         <h1 class="app-title">Brand Voice & Governance Settings</h1>
@@ -874,19 +973,19 @@ elif page == "Brand Settings":
 
 
 # ==============================================================================
-# 6. SYSTEM SETTINGS PAGE
+# 6. ENGINE & SETTINGS PAGE
 # ==============================================================================
 
-elif page == "System Settings":
+elif "Engine & Settings" in selected_nav or "System" in selected_nav:
     st.markdown("""
     <div class="app-header">
-        <h1 class="app-title">System Settings & Infrastructure Diagnostics</h1>
-        <p class="app-subtitle">Inspect local SQLite database status, monitor AI engine configuration, and verify schema migrations.</p>
+        <h1 class="app-title">Engine & Application Settings</h1>
+        <p class="app-subtitle">Configure AI model credentials, inspect local SQLite database tables, and manage application preferences.</p>
     </div>
     """, unsafe_allow_html=True)
 
     # Section 1: Database Health & Diagnostics
-    st.markdown("### 💾 Local SQLite Persistent Storage")
+    st.markdown("### 💾 Local Database Storage")
     is_cfg = is_database_configured()
     db_path = get_database_path()
 

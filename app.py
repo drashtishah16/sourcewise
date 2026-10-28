@@ -55,13 +55,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom SaaS Styling (Unique Dark Sidebar with Modern High-Contrast Canvas)
+# Custom SaaS Styling (Unique Obsidian Dark SaaS Platform Interface)
 st.markdown("""
 <style>
     /* Global Layout & Typography */
     .stApp {
-        background-color: #f8fafc;
-        color: #0f172a;
+        background-color: #0b0f19 !important;
+        color: #f8fafc !important;
         font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     
@@ -74,7 +74,7 @@ st.markdown("""
        UNIQUE OBSIDIAN SAAS SIDEBAR
        ========================================================================== */
     section[data-testid="stSidebar"] {
-        background-color: #0b0f19 !important;
+        background-color: #070a12 !important;
         border-right: 1px solid #1e293b !important;
     }
     section[data-testid="stSidebar"] * {
@@ -159,7 +159,7 @@ st.markdown("""
         cursor: pointer !important;
         border: 1px solid transparent !important;
     }
-    /* Hide the default radio circle */
+    /* Hide default radio circle */
     div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
         display: none !important;
     }
@@ -181,8 +181,8 @@ st.markdown("""
     }
     /* Active Selected State */
     div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {
-        background: linear-gradient(90deg, rgba(37, 99, 235, 0.18) 0%, rgba(99, 102, 241, 0.08) 100%) !important;
-        border: 1px solid rgba(59, 130, 246, 0.3) !important;
+        background: linear-gradient(90deg, rgba(37, 99, 235, 0.22) 0%, rgba(99, 102, 241, 0.1) 100%) !important;
+        border: 1px solid rgba(59, 130, 246, 0.4) !important;
         border-left: 3px solid #3b82f6 !important;
     }
     div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) div[data-testid="stMarkdownContainer"] p {
@@ -225,36 +225,36 @@ st.markdown("""
     /* Top Page Header */
     .app-header {
         padding: 0.5rem 0rem 1.25rem 0rem;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid #1e293b;
         margin-bottom: 1.5rem;
     }
     .app-title {
         font-size: 1.75rem;
         font-weight: 700;
-        color: #0f172a;
+        color: #ffffff;
         margin: 0;
         letter-spacing: -0.025em;
     }
     .app-subtitle {
         font-size: 0.95rem;
-        color: #475569;
+        color: #94a3b8;
         margin-top: 0.35rem;
         line-height: 1.4;
     }
 
     /* Card Containers */
     .saas-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
+        background: #111827;
+        border: 1px solid #1e293b;
         border-radius: 8px;
         padding: 1.25rem;
         margin-bottom: 1.25rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
     }
     .saas-card-header {
         font-size: 1.05rem;
         font-weight: 600;
-        color: #0f172a;
+        color: #f8fafc;
         margin-bottom: 0.75rem;
         display: flex;
         justify-content: space-between;
@@ -271,31 +271,31 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 0.025em;
     }
-    .badge-success { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-    .badge-warning { background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
-    .badge-danger { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
-    .badge-info { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-    .badge-neutral { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .badge-success { background-color: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-warning { background-color: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-danger { background-color: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-info { background-color: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-neutral { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; }
 
     /* Metric Cards */
     .metric-box {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
+        background: #111827;
+        border: 1px solid #1e293b;
         border-radius: 8px;
         padding: 1.1rem 1.25rem;
         text-align: left;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
     }
     .metric-value {
         font-size: 1.85rem;
         font-weight: 700;
-        color: #0f172a;
+        color: #ffffff;
         line-height: 1.1;
     }
     .metric-label {
         font-size: 0.825rem;
         font-weight: 600;
-        color: #64748b;
+        color: #94a3b8;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-top: 0.4rem;
@@ -303,31 +303,32 @@ st.markdown("""
 
     /* Canonical Passage Box */
     .passage-box {
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-left: 3px solid #0284c7;
+        background-color: #111827;
+        border: 1px solid #1e293b;
+        border-left: 3px solid #38bdf8;
         padding: 0.85rem 1rem;
         border-radius: 0 6px 6px 0;
         margin-bottom: 0.75rem;
         font-size: 0.9rem;
         line-height: 1.5;
+        color: #e2e8f0;
     }
     .passage-id {
         font-weight: 700;
-        color: #0284c7;
+        color: #38bdf8;
         margin-bottom: 0.25rem;
         font-size: 0.85rem;
     }
 
     /* Traceability Scope Notice */
     .scope-notice {
-        background-color: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background-color: #111827;
+        border: 1px solid #1e293b;
         border-left: 3px solid #64748b;
         border-radius: 4px;
         padding: 0.75rem 1rem;
         font-size: 0.85rem;
-        color: #475569;
+        color: #94a3b8;
         margin-bottom: 1.25rem;
         line-height: 1.5;
     }

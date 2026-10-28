@@ -130,13 +130,18 @@ def get_gemini_model() -> str:
     Defaults to the verified stable Flash model 'gemini-2.5-flash'.
     Can be overridden via GEMINI_MODEL or AI_MODEL_NAME.
     """
-    return get_secret_or_env("GEMINI_MODEL") or get_secret_or_env("AI_MODEL_NAME") or "gemini-2.5-flash"
+    return get_secret_or_env("GEMINI_MODEL") or get_secret_or_env("AI_MODEL_NAME") or "gemini-2.0-flash"
 
 def is_gemini_configured() -> bool:
-    """Returns True if a valid GEMINI_API_KEY is configured and FORCE_DEMO_MODE is not true."""
+    """Returns True only if a plausible GEMINI_API_KEY is configured and FORCE_DEMO_MODE is not true."""
     key = get_gemini_api_key()
+    if not key:
+        return False
+    clean = key.strip().strip("'\"").lower()
+    if clean.startswith("your-") or clean.startswith("your_") or clean in ("placeholder", "todo", "none", "dummy"):
+        return False
     force_demo = get_secret_or_env("FORCE_DEMO_MODE", "false").lower() in ("true", "1", "yes")
-    return bool(key) and not force_demo
+    return not force_demo
 
 def get_ai_credentials() -> Dict[str, Optional[str]]:
     """Returns configured AI provider API keys. Never fabricates keys."""

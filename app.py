@@ -790,7 +790,15 @@ elif "Create Content" in selected_nav:
                         brand = BrandProfileSchema(**SAMPLE_BRAND_PROFILE)
 
                     # Generate drafts via LLMProviderInterface (Gemini when configured, Demo otherwise)
-                    gen_result = LLMProviderInterface.generate(doc, brand, selected_platforms)
+                    fallback_warning = None
+                    try:
+                        gen_result = LLMProviderInterface.generate(doc, brand, selected_platforms)
+                    except GeminiGenerationError as ge:
+                        safe_detail = sanitize_ai_error(str(ge))
+                        logger.warning("Gemini generation failed (%s). Generating with deterministic rule engine...", safe_detail)
+                        gen_result = LLMProviderInterface.generate(doc, brand, selected_platforms, force_demo=True)
+                        fallback_warning = safe_detail
+
                     st.session_state.active_drafts = gen_result.drafts
 
                     # Auto-save generated drafts into database
@@ -800,22 +808,12 @@ elif "Create Content" in selected_nav:
                         if save_draft_ok:
                             saved_count += 1
 
-                if saved_count == len(gen_result.drafts):
+                if fallback_warning:
+                    st.warning(f"Note: Gemini API unavailable ({fallback_warning}). Repurposed drafts generated using the deterministic rule engine.")
+                elif saved_count == len(gen_result.drafts):
                     st.success(f"Generated and saved {len(gen_result.drafts)} drafts successfully. ({gen_result.message})")
                 else:
                     st.success(f"Generated {len(gen_result.drafts)} drafts. ({gen_result.message})")
-
-            except GeminiGenerationError as ge:
-                safe_detail = sanitize_ai_error(str(ge))
-                logger.error("Gemini generation failed: %s", safe_detail)
-                st.error(f"AI Content Generation Failed: {safe_detail}")
-                st.info("Tip: Verify your GEMINI_API_KEY in Streamlit Cloud Secrets (or Google AI Studio quota). You can also generate using the built-in deterministic rule-based engine below.")
-                if st.button("Generate with Rule-Based Engine (Demo Mode)", key="fallback_demo_btn", type="primary"):
-                    fallback_res = LLMProviderInterface.generate(doc, brand, selected_platforms, force_demo=True)
-                    st.session_state.active_drafts = fallback_res.drafts
-                    for d in fallback_res.drafts:
-                        DatabaseManager.save_content_draft(d)
-                    st.rerun()
             except SourceProcessingError as spe:
                 st.error(f"Source Document Issue: {str(spe)}")
             except Exception as e:

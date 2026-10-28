@@ -196,33 +196,39 @@ REQUIRED JSON OUTPUT FORMAT:
   ]
 }}"""
 
-        try:
-            config = types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                response_mime_type="application/json",
-                temperature=0.2
-            )
+        models_to_try = [model_name]
+        for candidate in ("gemini-2.0-flash", "gemini-2.5-flash"):
+            if candidate not in models_to_try:
+                models_to_try.append(candidate)
 
-            response = client.models.generate_content(
-                model=model_name,
-                contents=user_prompt,
-                config=config
-            )
-        except Exception as api_err:
-            safe_msg = sanitize_ai_error(api_err)
-            if ("not found" in safe_msg.lower() or "404" in safe_msg) and "1.5-flash" not in model_name:
-                try:
-                    logger.warning("Model %s not found, attempting fallback to gemini-1.5-flash", model_name)
-                    response = client.models.generate_content(
-                        model="gemini-1.5-flash",
-                        contents=user_prompt,
-                        config=config
-                    )
-                except Exception as fb_err:
-                    raise GeminiGenerationError(f"Gemini API request failed: {sanitize_ai_error(fb_err)}")
-            else:
-                logger.error("Gemini API call failed: %s", safe_msg)
-                raise GeminiGenerationError(f"Gemini API request failed ({model_name}): {safe_msg}")
+        response = None
+        last_error_msg = ""
+
+        for candidate_model in models_to_try:
+            try:
+                config = types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    response_mime_type="application/json",
+                    temperature=0.2
+                )
+                response = client.models.generate_content(
+                    model=candidate_model,
+                    contents=user_prompt,
+                    config=config
+                )
+                if response:
+                    break
+            except Exception as api_err:
+                safe_msg = sanitize_ai_error(api_err)
+                last_error_msg = safe_msg
+                # If API key itself is invalid, fail immediately without cycling models
+                if "api_key_invalid" in safe_msg.lower() or "api key not valid" in safe_msg.lower():
+                    logger.error("Gemini API key is invalid: %s", safe_msg)
+                    raise GeminiGenerationError(f"API key not valid: {safe_msg}")
+                logger.warning("Candidate model %s call failed: %s. Trying next...", candidate_model, safe_msg)
+
+        if response is None:
+            raise GeminiGenerationError(f"Gemini API generation failed across candidate models: {last_error_msg}")
 
         # Parse response JSON
         raw_text = response.text if hasattr(response, "text") and response.text else "{}"

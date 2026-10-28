@@ -1,19 +1,21 @@
 """
 Database Layer for SourceWise AI.
-Handles PostgreSQL / Supabase persistence using SQLAlchemy ORM with connection pooling,
-parameterized queries, and robust in-memory fallback when database configuration is absent.
-Never exposes credentials in logs or errors.
+Handles local persistent SQLite storage using SQLAlchemy ORM with foreign key enforcement
+(PRAGMA foreign_keys=ON) and in-memory fallback when database configuration is disabled.
+Never exposes sensitive system paths or credentials in logs or errors.
 """
 import logging
 import re
 from typing import List, Optional, Tuple, Dict, Any
 from datetime import datetime, timezone
 
-from sqlalchemy import create_engine, select, update, delete, text
+from sqlalchemy import create_engine, select, update, delete, text, event
+from sqlalchemy.engine import Engine
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.config import get_database_url, is_database_configured
+from src.config import get_database_url, get_database_path, is_database_configured
 from src.models import (
     Base,
     BrandProfileModel,
@@ -33,6 +35,16 @@ from src.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    """Ensures SQLite foreign key constraints are enforced on every database connection."""
+    try:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+    except Exception:
+        pass
 
 def sanitize_db_error(raw_error: Any) -> str:
     """
@@ -86,26 +98,25 @@ class DatabaseManager:
 
     @classmethod
     def get_engine(cls):
-        """Initializes or retrieves the cached SQLAlchemy engine."""
+        """Initializes or retrieves the cached SQLite SQLAlchemy engine."""
         url = get_database_url()
         if not url:
             return None
 
         if cls._engine is None:
-            # Connect timeout 6s to prevent hanging on bad host/credentials
-            connect_args = {"connect_timeout": 6}
-            # pg8000 uses timeout in connect_args if used
-            if "pg8000" in url:
-                connect_args = {"timeout": 6}
-
+            connect_args = {"check_same_thread": False}
             try:
-                cls._engine = create_engine(
-                    url,
-                    pool_pre_ping=True,
-                    pool_size=5,
-                    max_overflow=10,
-                    connect_args=connect_args
-                )
+                if ":memory:" in url:
+                    cls._engine = create_engine(
+                        url,
+                        connect_args=connect_args,
+                        poolclass=StaticPool
+                    )
+                else:
+                    cls._engine = create_engine(
+                        url,
+                        connect_args=connect_args
+                    )
                 cls._session_factory = sessionmaker(bind=cls._engine, autoflush=False, expire_on_commit=False)
             except Exception as e:
                 logger.error("Failed to construct SQLAlchemy engine: %s", str(e))
@@ -127,24 +138,25 @@ class DatabaseManager:
     @classmethod
     def check_connection(cls) -> Tuple[bool, str]:
         """
-        Tests the PostgreSQL database connection without leaking secrets.
+        Tests the SQLite database connection and verifies foreign key enforcement.
         Returns (success_boolean, human_readable_status_message).
         """
         if not is_database_configured():
-            return False, "Database not configured. Operating in Temporary Session Mode (Records not persisted)."
+            return False, "Database disabled. Operating in Temporary Session Mode (Records not persisted)."
 
         engine = cls.get_engine()
         if engine is None:
-            return False, "Could not initialize database driver or URL."
+            return False, "Could not initialize SQLite engine."
 
         try:
             with engine.connect() as conn:
                 result = conn.execute(text("SELECT 1")).scalar()
+                fk_status = conn.execute(text("PRAGMA foreign_keys")).scalar()
                 if result == 1:
-                    # Sanitize URL to show host safely
-                    url_str = str(engine.url)
-                    host_part = engine.url.host or "PostgreSQL"
-                    return True, f"Connected to PostgreSQL database at {host_part}."
+                    db_path = get_database_path()
+                    loc_desc = db_path.name if db_path else ":memory:"
+                    fk_label = "Foreign keys ON" if fk_status == 1 else "Foreign keys OFF"
+                    return True, f"Connected to local SQLite database ({loc_desc}, {fk_label})."
                 return False, "Database responded with unexpected result."
         except Exception as e:
             safe_err = sanitize_db_error(e)
@@ -154,10 +166,10 @@ class DatabaseManager:
     def init_db(cls) -> Tuple[bool, str]:
         """
         Safely creates tables if they do not exist.
-        Never drops or resets existing production tables.
+        Never drops or resets existing production tables or user data.
         """
         if not is_database_configured():
-            return False, "Database not configured. Cannot initialize schema."
+            return False, "Database disabled. Cannot initialize schema."
 
         engine = cls.get_engine()
         if engine is None:
@@ -165,7 +177,7 @@ class DatabaseManager:
 
         try:
             Base.metadata.create_all(bind=engine, checkfirst=True)
-            return True, "Database schema verified and initialized successfully."
+            return True, "SQLite database schema verified and initialized successfully."
         except Exception as e:
             safe_err = sanitize_db_error(e)
             logger.error("Failed to initialize database schema: %s", safe_err)
@@ -173,7 +185,7 @@ class DatabaseManager:
 
     @classmethod
     def is_persistent(cls) -> bool:
-        """Returns True only if real PostgreSQL database connection is operational."""
+        """Returns True if local SQLite database connection is operational."""
         success, _ = cls.check_connection()
         return success
 
@@ -221,7 +233,7 @@ class DatabaseManager:
                     )
                     session.add(model)
                 session.commit()
-                return True, "Brand profile successfully saved to PostgreSQL."
+                return True, "Brand profile successfully saved to SQLite database."
             except Exception as e:
                 session.rollback()
                 safe_err = sanitize_db_error(e)
@@ -284,7 +296,7 @@ class DatabaseManager:
                     return False, f"Brand profile '{profile_id}' not found."
                 session.delete(m)
                 session.commit()
-                return True, "Brand profile deleted from PostgreSQL."
+                return True, "Brand profile deleted from SQLite database."
             except Exception as e:
                 session.rollback()
                 safe_err = sanitize_db_error(e)
@@ -345,7 +357,7 @@ class DatabaseManager:
                     session.add(pm)
 
                 session.commit()
-                return True, "Source document and passages saved to PostgreSQL."
+                return True, "Source document and passages saved to SQLite database."
             except Exception as e:
                 session.rollback()
                 safe_err = sanitize_db_error(e)
@@ -463,7 +475,7 @@ class DatabaseManager:
                     session.add(cm)
 
                 session.commit()
-                return True, "Draft and evidence links saved to PostgreSQL."
+                return True, "Draft and evidence links saved to SQLite database."
             except Exception as e:
                 session.rollback()
                 safe_err = sanitize_db_error(e)
@@ -649,7 +661,7 @@ class DatabaseManager:
                     return False, "Draft not found."
                 session.delete(m)
                 session.commit()
-                return True, "Draft deleted from PostgreSQL."
+                return True, "Draft deleted from SQLite database."
             except Exception as e:
                 session.rollback()
                 safe_err = sanitize_db_error(e)

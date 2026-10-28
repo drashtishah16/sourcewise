@@ -1,13 +1,21 @@
 """
 Configuration management for SourceWise AI.
 Reads settings from environment variables (.env) or Streamlit secrets with safe fallbacks.
+Configures local persistent SQLite database by default at 'data/sourcewise.db'
+relative to project root.
 """
 import os
+from pathlib import Path
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 
 # Load local .env if present
 load_dotenv()
+
+# Project root directory (parent of src/)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
+DEFAULT_DB_PATH = DEFAULT_DATA_DIR / "sourcewise.db"
 
 def get_secret_or_env(key: str, default: Optional[str] = None) -> Optional[str]:
     """
@@ -30,37 +38,81 @@ def get_secret_or_env(key: str, default: Optional[str] = None) -> Optional[str]:
 
     return default
 
-def get_database_url() -> Optional[str]:
+def get_database_path() -> Optional[Path]:
     """
-    Returns the sanitized PostgreSQL database URL.
-    Ensures modern SQLAlchemy compatibility (replaces 'postgres://' with 'postgresql://'
-    or 'postgresql+psycopg://' if applicable).
+    Returns the resolved Path to the SQLite database file,
+    ensuring its parent directory exists.
+    Returns None if an in-memory database (:memory:) is configured.
+    """
+    # 1. Check custom DATABASE_PATH
+    custom_path_str = get_secret_or_env("DATABASE_PATH")
+    if custom_path_str:
+        p = Path(custom_path_str.strip())
+        if not p.is_absolute():
+            p = PROJECT_ROOT / p
+        p.parent.mkdir(parents=True, exist_ok=True)
+        return p.resolve()
+
+    # 2. Check DATABASE_URL for sqlite://
+    raw_url = get_secret_or_env("DATABASE_URL")
+    if raw_url:
+        url = raw_url.strip()
+        # Strip wrapping quotes
+        if (url.startswith('"') and url.endswith('"')) or (url.startswith("'") and url.endswith("'")):
+            url = url[1:-1].strip()
+
+        if ":memory:" in url:
+            return None
+
+        if url.startswith("sqlite:///"):
+            path_part = url[len("sqlite:///"):]
+            p = Path(path_part)
+            if not p.is_absolute():
+                p = PROJECT_ROOT / p
+            p.parent.mkdir(parents=True, exist_ok=True)
+            return p.resolve()
+
+    # 3. Default to project_root/data/sourcewise.db
+    DEFAULT_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    return DEFAULT_DB_PATH.resolve()
+
+def get_database_url() -> str:
+    """
+    Returns the sanitized SQLite database URL for SQLAlchemy.
+    Defaults to 'sqlite:///<project_root>/data/sourcewise.db'.
     """
     raw_url = get_secret_or_env("DATABASE_URL")
-    if not raw_url:
-        return None
+    if raw_url:
+        url = raw_url.strip()
+        if (url.startswith('"') and url.endswith('"')) or (url.startswith("'") and url.endswith("'")):
+            url = url[1:-1].strip()
+        if url.startswith("sqlite://"):
+            if ":memory:" in url:
+                return "sqlite:///:memory:"
+            # Resolve relative file path if provided
+            path_part = url[len("sqlite:///"):] if url.startswith("sqlite:///") else url[len("sqlite://"):]
+            p = Path(path_part)
+            if not p.is_absolute():
+                p = PROJECT_ROOT / p
+            p.parent.mkdir(parents=True, exist_ok=True)
+            return f"sqlite:///{p.resolve().as_posix()}"
 
-    url = raw_url.strip()
-    # Strip wrapping quotes if user pasted string inside quotes in .env
-    if (url.startswith('"') and url.endswith('"')) or (url.startswith("'") and url.endswith("'")):
-        url = url[1:-1].strip()
+    db_path = get_database_path()
+    if db_path is None:
+        return "sqlite:///:memory:"
 
-    # Normalize legacy prefix
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
-
-    # If it's a generic postgresql:// URL and psycopg is installed, prefer postgresql+psycopg://
-    # unless already specified with a driver
-    if url.startswith("postgresql://") and "+" not in url.split("://")[0]:
-        # Leave as postgresql:// or let SQLAlchemy pick the installed driver
-        pass
-
-    return url
+    return f"sqlite:///{db_path.as_posix()}"
 
 def is_database_configured() -> bool:
-    """Returns True if a valid DATABASE_URL is present in the configuration."""
-    url = get_database_url()
-    return bool(url and len(url) > 10 and "postgres" in url.lower() and "[YOUR-PASSWORD]" not in url)
+    """
+    Returns True if the persistent SQLite database is available and enabled.
+    Returns False only if explicitly disabled via DISABLE_DATABASE or FORCE_SESSION_MODE.
+    """
+    force_session = get_secret_or_env("FORCE_SESSION_MODE", "false").lower() in ("true", "1", "yes")
+    disable_db = get_secret_or_env("DISABLE_DATABASE", "false").lower() in ("true", "1", "yes")
+    if force_session or disable_db:
+        return False
+    return True
 
 def get_ai_credentials() -> Dict[str, Optional[str]]:
     """Returns configured AI provider API keys. Never fabricates keys."""
@@ -85,4 +137,3 @@ def is_connected_mode_available() -> bool:
 def get_app_env() -> str:
     """Returns current environment ('development' or 'production')."""
     return get_secret_or_env("APP_ENV", "development").lower()
-

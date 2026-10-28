@@ -56,26 +56,30 @@ To ensure the internship assessment project is 100% testable, gradeable, and dep
 
 ---
 
-## 5. How PostgreSQL Persistence Works & Graceful Fallback
+## 5. How SQLite Persistence Works & Graceful Fallback
 
 ### Persistent Storage
-- When `DATABASE_URL` is configured, SourceWise AI connects to Supabase-hosted PostgreSQL using SQLAlchemy 2.0.
+- By default, SourceWise AI uses a local SQLite database (`data/sourcewise.db`) via Python's built-in `sqlite3` driver and SQLAlchemy 2.0 ORM.
+- **Foreign Key Enforcement**: SQLite turns off foreign keys by default. SourceWise AI attaches a connection event listener (`PRAGMA foreign_keys = ON`) ensuring foreign keys and cascade deletions (`ON DELETE CASCADE`) are strictly enforced on every connection.
 - Operations are fully parameterized to eliminate SQL injection risks.
 - Relations feature cascade deletes (`ON DELETE CASCADE`), ensuring that deleting a source document cleanly purges associated passages, drafts, and evidence claims without leaving orphan records.
 
 ### Graceful Fallback Mode
-- If no database credentials are provided, `DatabaseManager` transparently operates through `InMemoryStore`.
-- Crucially, `DatabaseManager.is_persistent()` returns `False`. The UI displays a warning banner stating: `Session Memory (Unpersisted)`.
+- If database persistence is disabled (`DISABLE_DATABASE=true`), `DatabaseManager` transparently operates through `InMemoryStore`.
+- Crucially, `DatabaseManager.is_persistent()` returns `False`. The UI displays a warning badge stating: `Session Memory (Unpersisted)`.
 - The application **never fabricates a successful database write**—if persistence is unavailable, the user is honestly informed that records will last only for the current session.
+
+### Cloud Deployment Storage Trade-off
+- On **Streamlit Community Cloud**, apps run in containerized environments with ephemeral storage. SQLite provides zero-latency, zero-cost, self-contained persistence while the container is alive, but resets when the container sleeps or restarts. In an assessment or portfolio setting, this removes third-party database dependency risks and network latency without compromising real relational querying.
 
 ---
 
 ## 6. How Secrets Are Protected
 
-1. **Zero Committed Secrets**: `.env` and `secrets.toml` are excluded in `.gitignore`.
+1. **Zero Committed Secrets**: `.env`, `secrets.toml`, and `data/*.db` are excluded in `.gitignore`.
 2. **Safe Configuration Access**: `src/config.py` retrieves settings from Streamlit secrets or OS environment variables with default fallbacks.
 3. **Log & Export Sanitization**:
-   - Database connection strings are masked in logs and UI (passwords and project tokens filtered).
+   - Database connection paths and URIs are masked in logs and UI errors.
    - Export services (`ExportService.to_csv` and `ExportService.to_json`) only export domain content fields and explicitly omit connection strings, internal tokens, or user credentials.
    - Automated tests in `test_exports.py` explicitly verify that strings like `postgres://`, `password=`, and `api_key` never appear in exported outputs.
 
@@ -83,9 +87,10 @@ To ensure the internship assessment project is 100% testable, gradeable, and dep
 
 ## 7. How Automated Tests Work
 
-The test suite consists of **35 automated tests** in `pytest`:
-- **Isolation**: Normal tests require zero network access, zero external API keys, and zero production database access.
-- **ORM Integrity**: `test_database.py` validates real SQLAlchemy ORM models, foreign key relationships, and cascade deletes using an in-memory SQLite database (`sqlite:///:memory:`).
+The test suite consists of **38 automated tests** in `pytest`:
+- **Isolation**: Every test runs in total isolation using a temporary SQLite database fixture (`conftest.py`), leaving zero residual records.
+- **ORM Integrity & Cascades**: `test_database.py` validates real SQLAlchemy ORM models, foreign key relationships, orphan prevention, and cascade deletes.
+- **Connection Reopening & Persistence**: Tests verify that closing and recreating the SQLAlchemy engine retains data written to the database file.
 - **Edge Cases**:
   - Empty and whitespace-only inputs.
   - Text length boundary violations (<20 chars, >50,000 chars).

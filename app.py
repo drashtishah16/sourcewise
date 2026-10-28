@@ -32,7 +32,8 @@ from src.sample_data import (
     SAMPLE_ARTICLE_TEXT,
     SAMPLE_BRAND_PROFILE
 )
-from src.config import is_database_configured, is_connected_mode_available, get_ai_credentials
+from src.config import is_database_configured, is_connected_mode_available, get_ai_credentials, get_database_path
+from sqlalchemy import text
 
 # Page configuration
 st.set_page_config(
@@ -223,7 +224,7 @@ with st.sidebar:
     # Database Status
     db_connected, db_msg = DatabaseManager.check_connection()
     if db_connected:
-        st.markdown('<span class="badge badge-success">💾 PostgreSQL Connected</span>', unsafe_allow_html=True)
+        st.markdown('<span class="badge badge-success">💾 SQLite Connected</span>', unsafe_allow_html=True)
     else:
         st.markdown('<span class="badge badge-warning">⚠️ Session Memory (Unpersisted)</span>', unsafe_allow_html=True)
 
@@ -248,7 +249,7 @@ if page == "🏠 Workspace":
         st.info("ℹ️ **Active Mode: Demo Mode (No AI API Required)** — Generating deterministic, platform-adapted drafts using source text extraction, brand rules, and verifiable passage IDs. Zero API tokens required.")
     
     if not db_connected:
-        st.warning("⚠️ **Database Notice:** Running in Temporary Session Memory. To enable real PostgreSQL persistence across page reloads, configure `DATABASE_URL` in System Settings or `.env`.")
+        st.warning("⚠️ **Database Notice:** Running in Temporary Session Memory. To enable local SQLite persistence across restarts, check database settings in System Settings or `.env`.")
 
     # High-level Metrics
     all_drafts = DatabaseManager.list_content_drafts()
@@ -826,13 +827,14 @@ elif page == "⚙️ System Settings":
     st.markdown("""
     <div class="app-header">
         <h1 class="app-title">System Settings & Infrastructure Diagnostics</h1>
-        <p class="app-subtitle">Configure Supabase PostgreSQL connections, monitor AI engine modes, and verify schema migrations.</p>
+        <p class="app-subtitle">Inspect local SQLite database status, monitor AI engine modes, and verify schema migrations.</p>
     </div>
     """, unsafe_allow_html=True)
 
     # Section 1: Database Health & Credentials
-    st.markdown("### 💾 Supabase PostgreSQL Storage")
+    st.markdown("### 💾 Local SQLite Persistent Storage")
     is_cfg = is_database_configured()
+    db_path = get_database_path()
 
     if is_cfg:
         ok_conn, conn_msg = DatabaseManager.check_connection()
@@ -842,25 +844,45 @@ elif page == "⚙️ System Settings":
             st.error(f"❌ **Connection Error:** {conn_msg}")
     else:
         st.warning(
-            "⚠️ **PostgreSQL Not Configured:** Operating in Temporary Session Mode. "
-            "Data will not persist across browser sessions until connected."
+            "⚠️ **Database Disabled:** Operating in Temporary Session Mode. "
+            "Data will not persist across browser sessions until database is enabled."
         )
 
-    with st.expander("📖 Instructions to Connect Supabase PostgreSQL"):
-        st.markdown("""
-        1. Log into your [Supabase Dashboard](https://supabase.com/dashboard).
-        2. Create a new project or select an existing one.
-        3. Go to **Project Settings** → **Database** → **Connection String** → **URI**.
-        4. Copy the connection string. It will look like:
-           ```text
-           postgresql+psycopg://postgres.[project-ref]:[YOUR-PASSWORD]@aws-0-[region].pooler.supabase.com:6543/postgres?sslmode=require
-           ```
-        5. In local development: Add this to your local `.env` file as:
-           ```bash
-           DATABASE_URL="postgresql+psycopg://postgres:[YOUR-PASSWORD]@..."
-           ```
-        6. In Streamlit Community Cloud: Add to **App Settings** → **Secrets**.
-        """)
+    # SQLite Diagnostics
+    st.markdown("#### 🔍 Storage Diagnostics")
+    c_diag1, c_diag2, c_diag3 = st.columns(3)
+    engine = DatabaseManager.get_engine()
+    table_count = 0
+    fk_status_label = "Unknown"
+    if engine:
+        try:
+            from sqlalchemy import inspect as sa_inspect
+            inspector = sa_inspect(engine)
+            tables = inspector.get_table_names()
+            table_count = len(tables)
+            with engine.connect() as conn:
+                fk_val = conn.execute(text("PRAGMA foreign_keys")).scalar()
+                fk_status_label = "Active (Enforced)" if fk_val == 1 else "Disabled"
+        except Exception:
+            pass
+
+    with c_diag1:
+        st.metric("Database Engine", "SQLite 3")
+    with c_diag2:
+        st.metric("Tables Initialized", f"{table_count} / 6")
+    with c_diag3:
+        st.metric("Foreign Key Cascades", fk_status_label)
+
+    st.caption(f"📁 **Database File Path:** `{db_path if db_path else ':memory:'}`")
+
+    # Cloud Ephemeral Storage Advisory Note
+    st.info(
+        "ℹ️ **Cloud Deployment Advisory (Streamlit Community Cloud):**\n\n"
+        "SQLite writes to local disk (`data/sourcewise.db`). When deployed on **Streamlit Community Cloud**, "
+        "the local filesystem is ephemeral and container-based. Any data saved to SQLite will persist during "
+        "active user sessions, but will reset if the cloud container reboots, sleeps, or redeploys. "
+        "For a zero-dependency portfolio demonstration, SQLite provides complete offline reliability with no external network latency."
+    )
 
     col_db1, col_db2 = st.columns(2)
     with col_db1:

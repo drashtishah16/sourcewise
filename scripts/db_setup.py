@@ -1,8 +1,9 @@
 """
-Database Verification and Safe Setup Utility for SourceWise AI.
+SQLite Database Verification and Safe Setup Utility for SourceWise AI.
 Performs idempotent table initialization without dropping or altering existing user data.
+Verifies all 6 required tables exist and foreign keys are enforced.
 Validates live CRUD lifecycle: Insert -> Read -> Update -> Cleanup in a strict finally block.
-Guarantees zero credential leakage in console output and logs.
+Guarantees zero sensitive data leakage in console output and logs.
 """
 import sys
 import os
@@ -10,23 +11,36 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from sqlalchemy import inspect, text
 from src.database import DatabaseManager, sanitize_db_error
 from src.models import BrandProfileSchema, generate_id
-from src.config import is_database_configured
+from src.config import is_database_configured, get_database_path, get_database_url
+
+REQUIRED_TABLES = {
+    "brand_profiles",
+    "source_documents",
+    "source_passages",
+    "content_drafts",
+    "claim_evidence",
+    "review_events"
+}
 
 def main():
     print("=" * 65)
-    print("SOURCEWISE AI — SAFE DATABASE SETUP & CRUD VERIFICATION")
+    print("SOURCEWISE AI — SAFE SQLITE DATABASE SETUP & VERIFICATION")
     print("=" * 65)
 
     if not is_database_configured():
-        print("[!] No valid DATABASE_URL found in environment, secrets, or .env.")
+        print("[!] No active database configuration found.")
         print("    Operating in Temporary Session Mode (Records not persisted).")
         print("    Demo Mode remains 100% functional without an active database.")
-        print("    To connect Supabase, configure DATABASE_URL in .env or secrets.")
         sys.exit(0)
 
-    print("[*] Testing PostgreSQL connection...")
+    db_path = get_database_path()
+    if db_path:
+        print(f"[*] Target SQLite Database File: {db_path}")
+
+    print("[*] Testing SQLite database connection & foreign keys...")
     try:
         ok, msg = DatabaseManager.check_connection()
     except Exception as e:
@@ -47,6 +61,32 @@ def main():
         print(f"[-] Schema Initialization Failed: {sanitize_db_error(init_msg)}")
         sys.exit(1)
     print(f"[+] Schema Status: {sanitize_db_error(init_msg)}")
+
+    # Verify table existence
+    engine = DatabaseManager.get_engine()
+    if engine is None:
+        print("[-] Engine could not be retrieved.")
+        sys.exit(1)
+
+    try:
+        inspector = inspect(engine)
+        existing_tables = set(inspector.get_table_names())
+        missing_tables = REQUIRED_TABLES - existing_tables
+        if missing_tables:
+            print(f"[-] Missing required tables: {sorted(missing_tables)}")
+            sys.exit(1)
+        print(f"[+] All 6 required tables verified: {sorted(REQUIRED_TABLES)}")
+
+        # Verify foreign keys pragma is active
+        with engine.connect() as conn:
+            fk_val = conn.execute(text("PRAGMA foreign_keys")).scalar()
+            if fk_val != 1:
+                print(f"[-] SQLite foreign key enforcement check failed: PRAGMA foreign_keys = {fk_val}")
+                sys.exit(1)
+        print("[+] SQLite foreign key enforcement verified (PRAGMA foreign_keys = 1).")
+    except Exception as inspect_err:
+        print(f"[-] Table / Foreign Key verification failed: {sanitize_db_error(inspect_err)}")
+        sys.exit(1)
 
     print("[*] Beginning CRUD verification (Insert -> Read -> Update -> Cleanup)...")
     test_id = generate_id("diag_brand")
@@ -96,6 +136,7 @@ def main():
     except Exception as err:
         safe_msg = sanitize_db_error(err)
         print(f"[-] CRUD Verification Failed: {safe_msg}")
+        verification_passed = False
 
     finally:
         # 4. CLEANUP in finally block (guaranteed execution)
@@ -107,13 +148,15 @@ def main():
                 if del_ok and post_cleanup_check is None:
                     print(f"[+] 4/4 CLEANUP Passed: Diagnostic record '{test_id}' safely deleted.")
                 else:
-                    print(f"[!] Warning: Record '{test_id}' delete status: {sanitize_db_error(del_msg)}")
+                    print(f"[-] Warning: Record '{test_id}' was not completely removed: {sanitize_db_error(del_msg)}")
+                    verification_passed = False
             except Exception as del_err:
-                print(f"[!] Cleanup error: {sanitize_db_error(del_err)}")
+                print(f"[-] Cleanup error: {sanitize_db_error(del_err)}")
+                verification_passed = False
 
     print("=" * 65)
     if verification_passed:
-        print("[+] All PostgreSQL CRUD lifecycle tests completed successfully!")
+        print("[+] All SQLite CRUD lifecycle tests completed successfully!")
         sys.exit(0)
     else:
         print("[-] Database verification failed. See errors above.")

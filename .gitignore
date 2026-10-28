@@ -47,8 +47,13 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# App outputs / local logs
+# App outputs / local logs / database
 *.log
 local_cache/
 tmp/
+data/
+*.db
+*.sqlite
+*.sqlite3
+
 

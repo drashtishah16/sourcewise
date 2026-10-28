@@ -1,6 +1,6 @@
 # SourceWise AI — AI-Powered Social Content Repurposing and Evidence Traceability
 
-[![Live Application](https://img.shields.io/badge/Live%20Application-Streamlit%20Cloud-FF4B4B?logo=streamlit&logoColor=white)](https://sourcewise-966dabijbokkjrawyhg9t.streamlit.app)
+[![Live Application](https://img.shields.io/badge/Live%20Application-Streamlit%20Cloud-FF4B4B?logo=streamlit&logoColor=white)](https://sourcewise-966dabijbokkjrawyhng9t.streamlit.app/)
 [![Test Suite](https://img.shields.io/badge/pytest-41%20passed-success)](tests/)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.14-blue)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-red)](https://streamlit.io)
@@ -8,7 +8,7 @@
 [![AI Engine](https://img.shields.io/badge/AI%20Engine-Google%20Gemini%20Flash-orange)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey)](LICENSE)
 
-> 🚀 **Live Production Deployment**: [https://sourcewise-966dabijbokkjrawyhg9t.streamlit.app](https://sourcewise-966dabijbokkjrawyhg9t.streamlit.app)
+> 🚀 **Live Production Deployment**: [https://sourcewise-966dabijbokkjrawyhng9t.streamlit.app/](https://sourcewise-966dabijbokkjrawyhng9t.streamlit.app/)
 
 SourceWise AI is an enterprise-grade technical content repurposing system designed to transform long-form whitepapers, architecture case studies, and engineering blog posts into high-performing social drafts for **LinkedIn**, **Instagram**, and **Short-form Video Scripts (TikTok / Reels / Shorts)** using **Google Gemini AI** (`gemini-2.5-flash`).
 

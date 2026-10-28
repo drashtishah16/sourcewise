@@ -68,6 +68,25 @@ def test_brand_profile_crud_in_memory():
     assert len(all_profiles) >= 1
     assert any(p.id == profile.id for p in all_profiles)
 
+    # Delete
+    del_ok, del_msg = DatabaseManager.delete_brand_profile(profile.id)
+    assert del_ok is True
+    assert DatabaseManager.get_brand_profile(profile.id) is None
+
+
+def test_sanitize_db_error_masks_credentials():
+    from src.database import sanitize_db_error
+
+    raw_err = "psycopg.OperationalError: connection to server at 'db.supabase.co', port 5432 failed: password='super_secret_password_123' authentication failed for user 'postgres'"
+    safe_err = sanitize_db_error(raw_err)
+    assert "super_secret_password_123" not in safe_err
+    assert "password=***" in safe_err
+
+    raw_uri_err = "could not connect to postgresql+psycopg://postgres:secretPass123@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+    safe_uri_err = sanitize_db_error(raw_uri_err)
+    assert "secretPass123" not in safe_uri_err
+    assert "[PROTECTED_DATABASE_URL]" in safe_uri_err or "***@" in safe_uri_err
+
 
 def test_source_and_passages_crud_in_memory():
     doc_id = generate_id("doc")

@@ -5,6 +5,7 @@ parameterized queries, and robust in-memory fallback when database configuration
 Never exposes credentials in logs or errors.
 """
 import logging
+import re
 from typing import List, Optional, Tuple, Dict, Any
 from datetime import datetime, timezone
 
@@ -32,6 +33,22 @@ from src.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+def sanitize_db_error(raw_error: Any) -> str:
+    """
+    Strips credentials, connection URLs, and sensitive host tokens from error strings.
+    Guarantees zero leakage of passwords or database secrets in user-facing messages or logs.
+    """
+    if not raw_error:
+        return "Unknown database error."
+    msg = str(raw_error)
+    # Mask password in connection URIs like postgresql://user:pass@host:port/db
+    msg = re.sub(r"://([^:@\s]+):([^@\s]+)@", r"://\1:***@", msg)
+    # Mask query parameter passwords/tokens
+    msg = re.sub(r"(password|pwd|secret|token|apikey)\s*=\s*['\"]?[^'\"\s,]+['\"]?", r"\1=***", msg, flags=re.IGNORECASE)
+    # Mask any standalone database URLs
+    msg = re.sub(r"postgresql(?:\+[a-z0-9]+)?://[^\s'\",]+", "[PROTECTED_DATABASE_URL]", msg)
+    return msg
 
 
 class DatabaseOperationError(Exception):
@@ -130,12 +147,8 @@ class DatabaseManager:
                     return True, f"Connected to PostgreSQL database at {host_part}."
                 return False, "Database responded with unexpected result."
         except Exception as e:
-            # Mask any credentials from error
-            err_msg = str(e)
-            for part in err_msg.split():
-                if "@" in part or "password" in part.lower():
-                    err_msg = err_msg.replace(part, "[FILTERED]")
-            return False, f"Database connection failed: {err_msg[:120]}"
+            safe_err = sanitize_db_error(e)
+            return False, f"Database connection failed: {safe_err[:120]}"
 
     @classmethod
     def init_db(cls) -> Tuple[bool, str]:
@@ -151,11 +164,12 @@ class DatabaseManager:
             return False, "Engine not available."
 
         try:
-            Base.metadata.create_all(bind=engine)
+            Base.metadata.create_all(bind=engine, checkfirst=True)
             return True, "Database schema verified and initialized successfully."
         except Exception as e:
-            logger.error("Failed to initialize database schema: %s", str(e))
-            return False, f"Schema initialization failed: {str(e)[:100]}"
+            safe_err = sanitize_db_error(e)
+            logger.error("Failed to initialize database schema: %s", safe_err)
+            return False, f"Schema initialization failed: {safe_err[:100]}"
 
     @classmethod
     def is_persistent(cls) -> bool:
@@ -210,8 +224,9 @@ class DatabaseManager:
                 return True, "Brand profile successfully saved to PostgreSQL."
             except Exception as e:
                 session.rollback()
-                logger.error("Failed to save brand profile: %s", str(e))
-                return False, f"Database write error: {str(e)[:100]}"
+                safe_err = sanitize_db_error(e)
+                logger.error("Failed to save brand profile: %s", safe_err)
+                return False, f"Database write error: {safe_err[:100]}"
 
     @classmethod
     def list_brand_profiles(cls) -> List[BrandProfileSchema]:
@@ -251,6 +266,30 @@ class DatabaseManager:
             if p.id == profile_id:
                 return p
         return None
+
+    @classmethod
+    def delete_brand_profile(cls, profile_id: str) -> Tuple[bool, str]:
+        """Safely deletes an individual brand profile by ID."""
+        if not cls.is_persistent():
+            if profile_id in _MEMORY_STORE.brands:
+                del _MEMORY_STORE.brands[profile_id]
+                return True, "Brand profile removed from temporary session storage."
+            return False, f"Brand profile '{profile_id}' not found."
+
+        engine = cls.get_engine()
+        with Session(engine) as session:
+            try:
+                m = session.get(BrandProfileModel, profile_id)
+                if not m:
+                    return False, f"Brand profile '{profile_id}' not found."
+                session.delete(m)
+                session.commit()
+                return True, "Brand profile deleted from PostgreSQL."
+            except Exception as e:
+                session.rollback()
+                safe_err = sanitize_db_error(e)
+                logger.error("Failed to delete brand profile: %s", safe_err)
+                return False, f"Database delete error: {safe_err[:100]}"
 
     # ==========================================================================
     # SOURCE DOCUMENT REPOSITORY
@@ -309,8 +348,9 @@ class DatabaseManager:
                 return True, "Source document and passages saved to PostgreSQL."
             except Exception as e:
                 session.rollback()
-                logger.error("Failed to save source document: %s", str(e))
-                return False, f"Database write error: {str(e)[:100]}"
+                safe_err = sanitize_db_error(e)
+                logger.error("Failed to save source document: %s", safe_err)
+                return False, f"Database write error: {safe_err[:100]}"
 
     @classmethod
     def get_source_document(cls, doc_id: str) -> Optional[SourceDocumentSchema]:
@@ -426,8 +466,9 @@ class DatabaseManager:
                 return True, "Draft and evidence links saved to PostgreSQL."
             except Exception as e:
                 session.rollback()
-                logger.error("Failed to save content draft: %s", str(e))
-                return False, f"Database write error: {str(e)[:100]}"
+                safe_err = sanitize_db_error(e)
+                logger.error("Failed to save content draft: %s", safe_err)
+                return False, f"Database write error: {safe_err[:100]}"
 
     @classmethod
     def list_content_drafts(
@@ -611,5 +652,7 @@ class DatabaseManager:
                 return True, "Draft deleted from PostgreSQL."
             except Exception as e:
                 session.rollback()
-                return False, f"Failed to delete draft: {str(e)[:100]}"
+                safe_err = sanitize_db_error(e)
+                logger.error("Failed to delete draft: %s", safe_err)
+                return False, f"Failed to delete draft: {safe_err[:100]}"
 

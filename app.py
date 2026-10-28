@@ -55,14 +55,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom SaaS Styling (Unique Obsidian Dark SaaS Platform Interface)
+# Custom SaaS Styling (Warm Editorial Publishing & Evidence Traceability Design)
 st.markdown("""
 <style>
+    /* ==========================================================================
+       SOURCEWISE AI — EDITORIAL DESIGN SYSTEM
+       Warm rag-paper canvas, printer's ink, forest green & muted terracotta accents.
+       ========================================================================== */
+
     /* Global Layout & Typography */
     .stApp {
-        background-color: #0b0f19 !important;
-        color: #f8fafc !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: #faf8f5 !important;
+        color: #1c1917 !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     
     /* Top Header Bar */
@@ -70,267 +75,374 @@ st.markdown("""
         background: transparent !important;
     }
 
-    /* ==========================================================================
-       UNIQUE OBSIDIAN SAAS SIDEBAR
-       ========================================================================== */
+    /* Distinctive Editorial Sidebar */
     section[data-testid="stSidebar"] {
-        background-color: #070a12 !important;
-        border-right: 1px solid #1e293b !important;
+        background-color: #f3f0e8 !important;
+        border-right: 1px solid #ded9cd !important;
     }
     section[data-testid="stSidebar"] * {
-        color: #94a3b8;
+        color: #44403c;
     }
     
-    .sw-sidebar-brand {
+    .sw-masthead {
         display: flex;
         align-items: center;
         gap: 0.85rem;
-        padding: 0.75rem 0.25rem 1.25rem 0.25rem;
-        border-bottom: 1px solid #1e293b;
+        padding: 0.85rem 0.25rem 1.25rem 0.25rem;
+        border-bottom: 2px solid #1c1917;
         margin-bottom: 1.25rem;
     }
-    .sw-brand-icon {
+    .sw-seal {
         width: 38px;
         height: 38px;
-        background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
-        color: #ffffff !important;
-        border-radius: 10px;
+        background-color: #1b4332;
+        color: #faf8f5 !important;
+        font-family: "Georgia", "Times New Roman", serif;
+        font-weight: 700;
+        font-size: 1.05rem;
+        letter-spacing: 0.05em;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 800;
-        font-size: 1.15rem;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(27, 67, 50, 0.25);
     }
-    .sw-brand-text {
+    .sw-identity {
         display: flex;
         flex-direction: column;
     }
     .sw-brand-name {
+        font-family: "Georgia", "Times New Roman", serif;
         font-size: 1.15rem;
         font-weight: 700;
-        color: #f8fafc !important;
-        letter-spacing: -0.025em;
+        color: #1c1917 !important;
+        letter-spacing: 0.06em;
         line-height: 1.2;
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
-    .sw-brand-badge {
-        font-size: 0.65rem;
-        font-weight: 700;
-        background: linear-gradient(90deg, #2563eb, #7c3aed);
-        color: #ffffff !important;
-        padding: 0.15rem 0.45rem;
-        border-radius: 4px;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
     }
     .sw-brand-sub {
-        font-size: 0.75rem;
-        color: #64748b !important;
-        font-weight: 500;
+        font-size: 0.72rem;
+        color: #78716c !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
         margin-top: 2px;
     }
 
     .sw-nav-section-title {
-        font-size: 0.7rem;
+        font-size: 0.68rem;
         font-weight: 700;
-        color: #475569 !important;
+        color: #78716c !important;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        padding: 0.5rem 0.6rem 0.35rem 0.6rem;
-        margin-top: 0.25rem;
+        letter-spacing: 0.12em;
+        padding: 0.5rem 0.5rem 0.35rem 0.5rem;
+        border-bottom: 1px solid #e7e4dc;
+        margin-bottom: 0.5rem;
     }
 
-    /* Unique Navigation Items */
+    /* Unique Editorial Navigation Items (No Radio Circles, No Emoji) */
     div[data-testid="stSidebar"] div[data-testid="stRadio"] > div {
-        gap: 0.35rem;
+        gap: 0.25rem;
     }
     div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"] {
         display: flex !important;
         align-items: center !important;
         width: 100% !important;
-        padding: 0.65rem 0.9rem !important;
-        border-radius: 8px !important;
+        padding: 0.6rem 0.85rem !important;
+        border-radius: 4px !important;
         background-color: transparent !important;
-        transition: all 0.15s ease-in-out !important;
+        transition: all 0.12s ease-in-out !important;
         cursor: pointer !important;
         border: 1px solid transparent !important;
     }
-    /* Hide default radio circle */
+    /* Hide the native radio circle completely */
     div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
         display: none !important;
     }
-    /* Navigation typography */
+    /* Navigation Item Typography */
     div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p {
-        font-size: 0.9rem !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        font-size: 0.88rem !important;
         font-weight: 500 !important;
-        color: #94a3b8 !important;
+        color: #44403c !important;
         margin: 0 !important;
-        transition: color 0.15s ease !important;
+        letter-spacing: 0.01em !important;
     }
-    /* Hover State */
+    /* Navigation Hover */
     div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border-color: rgba(255, 255, 255, 0.05) !important;
+        background-color: #eae5d9 !important;
+        border-color: #ded9cd !important;
     }
     div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"]:hover div[data-testid="stMarkdownContainer"] p {
-        color: #f1f5f9 !important;
+        color: #1c1917 !important;
     }
-    /* Active Selected State */
+    /* Navigation Active / Selected State (Forest Green Editorial Indicator) */
     div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {
-        background: linear-gradient(90deg, rgba(37, 99, 235, 0.22) 0%, rgba(99, 102, 241, 0.1) 100%) !important;
-        border: 1px solid rgba(59, 130, 246, 0.4) !important;
-        border-left: 3px solid #3b82f6 !important;
+        background-color: #eaf1ec !important;
+        border: 1px solid #c8dcd0 !important;
+        border-left: 3px solid #1b4332 !important;
     }
     div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) div[data-testid="stMarkdownContainer"] p {
-        color: #ffffff !important;
-        font-weight: 600 !important;
+        color: #1b4332 !important;
+        font-weight: 700 !important;
     }
 
-    /* Sidebar Footer */
-    .sw-sidebar-footer {
+    /* Sidebar Colophon */
+    .sw-sidebar-colophon {
         margin-top: 2.5rem;
         padding-top: 1rem;
-        border-top: 1px solid #1e293b;
+        border-top: 1px solid #ded9cd;
     }
-    .sw-footer-card {
-        background: rgba(30, 41, 59, 0.4);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        padding: 0.75rem 0.85rem;
-        display: flex;
-        align-items: center;
-        gap: 0.65rem;
+    .sw-colophon-tag {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #78716c !important;
     }
-    .sw-footer-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: #10b981;
-        box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
-    }
-    .sw-footer-text {
-        font-size: 0.75rem;
-        color: #94a3b8 !important;
-        line-height: 1.3;
-    }
-    .sw-footer-title {
+    .sw-colophon-body {
+        font-size: 0.78rem;
         font-weight: 600;
-        color: #f1f5f9 !important;
+        color: #1c1917 !important;
+        margin-top: 2px;
+    }
+    .sw-colophon-meta {
+        font-size: 0.7rem;
+        color: #1b4332 !important;
+        font-weight: 600;
+        margin-top: 2px;
     }
 
-    /* Top Page Header */
+    /* Page Header */
     .app-header {
         padding: 0.5rem 0rem 1.25rem 0rem;
-        border-bottom: 1px solid #1e293b;
+        border-bottom: 1px solid #ded9cd;
         margin-bottom: 1.5rem;
     }
-    .app-title {
-        font-size: 1.75rem;
+    .app-eyebrow {
+        font-size: 0.72rem;
         font-weight: 700;
-        color: #ffffff;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #c25e46;
+        margin-bottom: 0.35rem;
+    }
+    .app-title {
+        font-family: "Georgia", "Times New Roman", serif;
+        font-size: 1.85rem;
+        font-weight: 700;
+        color: #1c1917;
         margin: 0;
-        letter-spacing: -0.025em;
+        letter-spacing: -0.015em;
+        line-height: 1.2;
     }
     .app-subtitle {
         font-size: 0.95rem;
-        color: #94a3b8;
-        margin-top: 0.35rem;
-        line-height: 1.4;
+        color: #57534e;
+        margin-top: 0.4rem;
+        line-height: 1.5;
+        max-width: 820px;
     }
 
-    /* Card Containers */
+    /* Structured Editorial Metric Panels */
+    .sw-metric-panel {
+        background: #ffffff;
+        border: 1px solid #e7e4dc;
+        border-radius: 4px;
+        padding: 1.1rem 1.25rem;
+        border-top: 3px solid #1c1917;
+        box-shadow: 0 1px 2px rgba(28, 25, 23, 0.03);
+    }
+    .sw-metric-panel.accent-forest {
+        border-top: 3px solid #1b4332;
+    }
+    .sw-metric-panel.accent-coral {
+        border-top: 3px solid #c25e46;
+    }
+    .sw-metric-value {
+        font-size: 1.95rem;
+        font-weight: 700;
+        color: #1c1917;
+        line-height: 1.1;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .sw-metric-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #78716c;
+        margin-top: 0.35rem;
+    }
+    .sw-metric-sub {
+        font-size: 0.75rem;
+        color: #57534e;
+        margin-top: 0.3rem;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    /* Editorial Pipeline Ribbon */
+    .sw-pipeline-box {
+        background: #ffffff;
+        border: 1px solid #e7e4dc;
+        border-radius: 4px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 2px rgba(28, 25, 23, 0.03);
+    }
+    .sw-pipeline-header {
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #78716c;
+        margin-bottom: 0.75rem;
+        border-bottom: 1px solid #f2efe8;
+        padding-bottom: 0.4rem;
+    }
+    .sw-pipeline-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+    }
+    .sw-step-item {
+        border-left: 2px solid #ded9cd;
+        padding-left: 0.75rem;
+    }
+    .sw-step-item.active {
+        border-left-color: #1b4332;
+    }
+    .sw-step-num {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #1b4332;
+        letter-spacing: 0.05em;
+    }
+    .sw-step-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #1c1917;
+        margin: 0.15rem 0;
+    }
+    .sw-step-detail {
+        font-size: 0.72rem;
+        color: #78716c;
+        line-height: 1.3;
+    }
+
+    /* Editorial Standard Cards */
     .saas-card {
-        background: #111827;
-        border: 1px solid #1e293b;
-        border-radius: 8px;
+        background: #ffffff;
+        border: 1px solid #e7e4dc;
+        border-radius: 4px;
         padding: 1.25rem;
         margin-bottom: 1.25rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 1px 3px rgba(28, 25, 23, 0.03);
     }
     .saas-card-header {
+        font-family: "Georgia", "Times New Roman", serif;
         font-size: 1.05rem;
-        font-weight: 600;
-        color: #f8fafc;
+        font-weight: 700;
+        color: #1c1917;
         margin-bottom: 0.75rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
-    /* Status Badges */
+    /* Publication Badges */
     .badge {
         display: inline-block;
         padding: 0.2rem 0.55rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-    }
-    .badge-success { background-color: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-    .badge-warning { background-color: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-    .badge-danger { background-color: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-    .badge-info { background-color: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-    .badge-neutral { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; }
-
-    /* Metric Cards */
-    .metric-box {
-        background: #111827;
-        border: 1px solid #1e293b;
-        border-radius: 8px;
-        padding: 1.1rem 1.25rem;
-        text-align: left;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-    }
-    .metric-value {
-        font-size: 1.85rem;
+        border-radius: 3px;
+        font-size: 0.72rem;
         font-weight: 700;
-        color: #ffffff;
-        line-height: 1.1;
-    }
-    .metric-label {
-        font-size: 0.825rem;
-        font-weight: 600;
-        color: #94a3b8;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        margin-top: 0.4rem;
     }
+    .badge-success { background-color: #eef5f1; color: #1b4332; border: 1px solid #cce3d5; }
+    .badge-warning { background-color: #fdf5eb; color: #a16207; border: 1px solid #fae8cd; }
+    .badge-danger { background-color: #fdf2f0; color: #9f3a24; border: 1px solid #f6d2c8; }
+    .badge-neutral { background-color: #f3f0e8; color: #57534e; border: 1px solid #ded9cd; }
 
-    /* Canonical Passage Box */
+    /* Canonical Passage Elements */
     .passage-box {
-        background-color: #111827;
-        border: 1px solid #1e293b;
-        border-left: 3px solid #38bdf8;
+        background-color: #ffffff;
+        border: 1px solid #e7e4dc;
+        border-left: 3px solid #1b4332;
         padding: 0.85rem 1rem;
-        border-radius: 0 6px 6px 0;
+        border-radius: 0 4px 4px 0;
         margin-bottom: 0.75rem;
-        font-size: 0.9rem;
-        line-height: 1.5;
-        color: #e2e8f0;
+        font-size: 0.92rem;
+        line-height: 1.6;
+        color: #292524;
     }
     .passage-id {
         font-weight: 700;
-        color: #38bdf8;
+        color: #1b4332;
         margin-bottom: 0.25rem;
-        font-size: 0.85rem;
+        font-size: 0.78rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
     }
-
-    /* Traceability Scope Notice */
     .scope-notice {
-        background-color: #111827;
-        border: 1px solid #1e293b;
-        border-left: 3px solid #64748b;
-        border-radius: 4px;
+        background-color: #ffffff;
+        border: 1px solid #e7e4dc;
+        border-left: 3px solid #78716c;
+        border-radius: 0 4px 4px 0;
         padding: 0.75rem 1rem;
         font-size: 0.85rem;
-        color: #94a3b8;
+        color: #57534e;
         margin-bottom: 1.25rem;
         line-height: 1.5;
+    }
+
+    /* Structured Diagnostic & Advisory Cards (Replacing technical banners) */
+    .sw-advisory-card {
+        background: #ffffff;
+        border: 1px solid #e7e4dc;
+        border-left: 3px solid #1b4332;
+        border-radius: 0 4px 4px 0;
+        padding: 0.85rem 1rem;
+        margin-bottom: 1rem;
+    }
+    .sw-advisory-title {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #1b4332;
+        margin-bottom: 0.25rem;
+    }
+    .sw-advisory-body {
+        font-size: 0.85rem;
+        color: #57534e;
+        line-height: 1.5;
+    }
+
+    /* Primary and Secondary Action Buttons */
+    button[kind="primary"] {
+        background-color: #c25e46 !important;
+        border-color: #c25e46 !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        border-radius: 4px !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #af4e38 !important;
+        border-color: #af4e38 !important;
+    }
+    button[kind="secondary"] {
+        background-color: #ffffff !important;
+        border: 1px solid #ded9cd !important;
+        color: #1c1917 !important;
+        font-weight: 500 !important;
+        border-radius: 4px !important;
+    }
+    button[kind="secondary"]:hover {
+        background-color: #f4f1ea !important;
+        border-color: #c8c3b7 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -369,30 +481,28 @@ init_session_state()
 
 
 # ==============================================================================
-# SIDEBAR NAVIGATION (UNIQUE OBSIDIAN SAAS INTERFACE)
+# SIDEBAR NAVIGATION (BESPOKE EDITORIAL PUBLISHING INTERFACE)
 # ==============================================================================
 
 with st.sidebar:
     st.markdown("""
-    <div class="sw-sidebar-brand">
-        <div class="sw-brand-icon">
-            <span>S</span>
-        </div>
-        <div class="sw-brand-text">
-            <div class="sw-brand-name">SourceWise <span class="sw-brand-badge">AI</span></div>
-            <div class="sw-brand-sub">Traceable Repurposing</div>
+    <div class="sw-masthead">
+        <div class="sw-seal">SW</div>
+        <div class="sw-identity">
+            <div class="sw-brand-name">SOURCEWISE</div>
+            <div class="sw-brand-sub">Editorial Evidence Engine</div>
         </div>
     </div>
-    <div class="sw-nav-section-title">PLATFORM NAVIGATION</div>
+    <div class="sw-nav-section-title">DESK NAVIGATION</div>
     """, unsafe_allow_html=True)
 
     nav_options = [
-        "⊞  Workspace",
-        "✦  Create Content",
-        "⚲  Evidence Review",
-        "▤  Content Library",
-        "◎  Brand Settings",
-        "⚙  Engine & Settings"
+        "01  Workspace",
+        "02  Create Content",
+        "03  Evidence Review",
+        "04  Content Library",
+        "05  Brand Settings",
+        "06  System Settings"
     ]
 
     selected_nav = st.radio(
@@ -403,14 +513,10 @@ with st.sidebar:
     )
 
     st.markdown("""
-    <div class="sw-sidebar-footer">
-        <div class="sw-footer-card">
-            <div class="sw-footer-dot"></div>
-            <div class="sw-footer-text">
-                <div class="sw-footer-title">Workspace Active</div>
-                <div>SourceWise Studio • Ready</div>
-            </div>
-        </div>
+    <div class="sw-sidebar-colophon">
+        <div class="sw-colophon-tag">AUTHORITATIVE REPURPOSING</div>
+        <div class="sw-colophon-body">Canonical Passage Pinning & Verification</div>
+        <div class="sw-colophon-meta">SQLite Local • Evidence Grounded</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -422,90 +528,144 @@ with st.sidebar:
 if "Workspace" in selected_nav:
     st.markdown("""
     <div class="app-header">
-        <h1 class="app-title">Workspace Overview</h1>
-        <p class="app-subtitle">Transform long-form technical content into evidence-grounded social posts with verifiable factual citations.</p>
+        <div class="app-eyebrow">EDITORIAL DESK / OVERVIEW</div>
+        <h1 class="app-title">Content Repurposing & Traceability Ledger</h1>
+        <p class="app-subtitle">Transform long-form engineering whitepapers, research case studies, and architecture articles into high-performance social content with verifiable factual citations.</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # High-level Metrics
+    # Visual Workflow Architecture Ribbon
+    st.markdown("""
+    <div class="sw-pipeline-box">
+        <div class="sw-pipeline-header">REPURPOSING & FACTUAL AUDIT PIPELINE</div>
+        <div class="sw-pipeline-grid">
+            <div class="sw-step-item active">
+                <div class="sw-step-num">STAGE 01</div>
+                <div class="sw-step-title">Ingest & Parse</div>
+                <div class="sw-step-detail">Authoritative source text & versioned document record</div>
+            </div>
+            <div class="sw-step-item active">
+                <div class="sw-step-num">STAGE 02</div>
+                <div class="sw-step-title">Canonical Passages</div>
+                <div class="sw-step-detail">Partitioned units [S1], [S2] with exact character offsets</div>
+            </div>
+            <div class="sw-step-item">
+                <div class="sw-step-num">STAGE 03</div>
+                <div class="sw-step-title">Channel Adaptation</div>
+                <div class="sw-step-detail">Tailored LinkedIn, Instagram, and Video scripts</div>
+            </div>
+            <div class="sw-step-item">
+                <div class="sw-step-num">STAGE 04</div>
+                <div class="sw-step-title">Evidence Audit</div>
+                <div class="sw-step-detail">Assertion verification and human editorial approval</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Distinctive Editorial Metric Panels
     all_drafts = DatabaseManager.list_content_drafts()
     total_drafts = len(all_drafts)
     approved_drafts = len([d for d in all_drafts if d.review_status == "approved"])
     in_review_drafts = len([d for d in all_drafts if d.review_status in ("draft", "in_review", "reopened")])
     total_claims = sum(len(d.claims) for d in all_drafts)
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3 = st.columns([1, 1, 1])
     with c1:
         st.markdown(f"""
-        <div class="metric-box">
-            <div class="metric-value">{total_drafts}</div>
-            <div class="metric-label">Total Drafts Created</div>
+        <div class="sw-metric-panel accent-forest">
+            <div class="sw-metric-value">{total_drafts}</div>
+            <div class="sw-metric-label">Repurposed Drafts</div>
+            <div class="sw-metric-sub">
+                <span class="badge badge-success">{approved_drafts} Approved</span>
+                <span style="color: #78716c; font-size: 0.72rem;">for publication</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     with c2:
         st.markdown(f"""
-        <div class="metric-box">
-            <div class="metric-value">{approved_drafts}</div>
-            <div class="metric-label">Approved Content</div>
+        <div class="sw-metric-panel accent-coral">
+            <div class="sw-metric-value">{total_claims}</div>
+            <div class="sw-metric-label">Audited Factual Claims</div>
+            <div class="sw-metric-sub">
+                <span class="badge badge-warning">{in_review_drafts} Pending</span>
+                <span style="color: #78716c; font-size: 0.72rem;">editorial sign-off</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     with c3:
         st.markdown(f"""
-        <div class="metric-box">
-            <div class="metric-value">{in_review_drafts}</div>
-            <div class="metric-label">Pending Reviews</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c4:
-        st.markdown(f"""
-        <div class="metric-box">
-            <div class="metric-value">{total_claims}</div>
-            <div class="metric-label">Verified Claims</div>
+        <div class="sw-metric-panel">
+            <div class="sw-metric-value">100%</div>
+            <div class="sw-metric-label">Traceability Standard</div>
+            <div class="sw-metric-sub">
+                <span class="badge badge-neutral">SQLite 3</span>
+                <span style="color: #78716c; font-size: 0.72rem;">Verified local storage</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
 
-    # Quick Start Actions
+    # Action & Editorial Standards Strip
     col_act1, col_act2 = st.columns([2, 1])
     with col_act1:
-        st.markdown("### Quick Start Workflow")
         st.markdown("""
-        1. **Create Repurposed Content**: Ingest whitepapers or blogs, segment into numbered passages (`S1`, `S2`...), and generate platform-optimized social posts.
-        2. **Audit Evidence & Grounding**: Review citations side-by-side with source text. Ensure all statistics, benchmarks, and quotes match.
-        3. **Approve & Export**: Confirm brand compliance scores and export verified drafts to RFC 4180 CSV or structured JSON.
-        """)
-
-    with col_act2:
-        st.markdown("### Actions")
-        if st.button("✨ Repurpose Fictional Case Study", use_container_width=True, type="primary"):
+        <div class="saas-card">
+            <div class="saas-card-header">
+                <span>Start New Repurposing Session</span>
+                <span class="badge badge-neutral">Ready</span>
+            </div>
+            <p style="color: #57534e; font-size: 0.88rem; line-height: 1.5; margin-bottom: 0.85rem;">
+                Load technical documentation or whitepapers to generate channel-specific drafts with automatic citation pinning against source passages.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("⚡ Load NexusPay Case Study (One-Click Ingest)", type="primary", use_container_width=True):
             st.session_state.source_title = SAMPLE_ARTICLE_TITLE
             st.session_state.source_type = SAMPLE_ARTICLE_TYPE
             st.session_state.source_url = SAMPLE_ARTICLE_URL
             st.session_state.source_text = SAMPLE_ARTICLE_TEXT
-            st.success("Loaded NexusPay case study! Navigate to 'Create Content' to generate.")
+            st.success("Loaded NexusPay case study. Select '02  Create Content' in the sidebar to generate.")
+
+    with col_act2:
+        st.markdown("""
+        <div class="saas-card">
+            <div class="saas-card-header">Editorial Standards</div>
+            <ul style="color: #57534e; font-size: 0.8rem; line-height: 1.55; padding-left: 1.1rem; margin: 0;">
+                <li><strong>No Hallucinated Citations:</strong> Claims require mapped passage IDs.</li>
+                <li><strong>Metric Auditing:</strong> Percentages and benchmark metrics must match source text.</li>
+                <li><strong>Approval Guard:</strong> Edits to approved text automatically reset status.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("---")
 
-    # Recent drafts table
-    st.markdown("### Recent Repurposed Drafts")
+    # Recent drafts ledger
+    st.markdown("### Repurposed Content Ledger")
     if all_drafts:
-        for draft in all_drafts[:5]:
+        for draft in all_drafts[:6]:
             with st.container():
                 c_d1, c_d2, c_d3, c_d4 = st.columns([3, 1, 1, 1])
                 with c_d1:
                     st.markdown(f"**{draft.hook_title}**")
-                    st.caption(f"Platform: `{draft.platform.upper()}` • Mode: `{draft.generation_mode.upper()}`")
+                    st.caption(f"Channel: `{draft.platform.upper()}` • Mode: `{draft.generation_mode.upper()}`")
                 with c_d2:
                     badge_class = "badge-success" if draft.review_status == "approved" else "badge-warning"
-                    st.markdown(f'<span class="badge {badge_class}">{draft.review_status}</span>', unsafe_allow_html=True)
+                    st.markdown(f'<span class="badge {badge_class}">{draft.review_status.upper()}</span>', unsafe_allow_html=True)
                 with c_d3:
                     st.write(f"Claims: **{len(draft.claims)}**")
                 with c_d4:
                     st.write(f"Score: **{draft.compliance_score}/100**")
-                st.markdown("<hr style='margin: 0.5rem 0; border: none; border-top: 1px solid #f1f5f9;'/>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin: 0.5rem 0; border: none; border-top: 1px solid #e7e4dc;'/>", unsafe_allow_html=True)
     else:
-        st.info("No drafts created yet. Head to **Create Content** to repurpose your first source document.")
+        st.markdown("""
+        <div class="saas-card" style="text-align: center; padding: 2rem;">
+            <div style="font-weight: 600; color: #1c1917; margin-bottom: 0.35rem;">No Content Drafts Yet</div>
+            <div style="color: #78716c; font-size: 0.85rem;">Select <strong>02  Create Content</strong> in the sidebar to ingest your first source document.</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # ==============================================================================
@@ -574,13 +734,11 @@ elif "Create Content" in selected_nav:
             cb_instagram = st.checkbox("Instagram Caption (Punchy hook & mobile spacing)", value=True)
             cb_video = st.checkbox("Short-form Video Script (TikTok / Reels / Shorts 60s)", value=True)
 
-        # Subtle helper line beside action
         gemini_ready = is_gemini_configured()
         if gemini_ready:
-            btn_label = f"✨ Generate Repurposed Drafts (Gemini AI: {get_gemini_model()})"
+            btn_label = f"Generate Repurposed Drafts (Gemini: {get_gemini_model()})"
         else:
-            btn_label = "🚀 Generate Repurposed Drafts"
-            st.caption("ℹ️ Configure `GEMINI_API_KEY` to enable real Gemini AI generation. Running with deterministic rules.")
+            btn_label = "Generate Repurposed Drafts"
 
         submitted = st.form_submit_button(btn_label, type="primary", use_container_width=True)
 
@@ -684,18 +842,18 @@ elif "Create Content" in selected_nav:
                             st.caption(f"Supporting Excerpt: \"{c.supporting_excerpt}\"")
                         if c.flag_reasons:
                             for f in c.flag_reasons:
-                                st.warning(f"⚠️ {f}")
+                                st.warning(f"Audit Flag: {f}")
 
                 # Quick action buttons
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
-                    if st.button(f"✅ Approve Draft for {draft.platform.upper()}", key=f"app_{draft.id}", use_container_width=True):
+                    if st.button(f"Approve Draft ({draft.platform.upper()})", key=f"app_{draft.id}", use_container_width=True, type="primary"):
                         DatabaseManager.update_draft_status(draft.id, "approved", notes="Directly approved from Creator view.")
                         draft.review_status = "approved"
-                        st.success(f"{draft.platform.upper()} draft approved!")
+                        st.success(f"{draft.platform.upper()} draft approved.")
                         st.rerun()
                 with col_btn2:
-                    if st.button(f"📋 Copy to Clipboard", key=f"copy_{draft.id}", use_container_width=True):
+                    if st.button("Copy Content to Clipboard", key=f"copy_{draft.id}", use_container_width=True):
                         st.info("Content selected for copy. Use Ctrl+C inside the content area.")
 
 
@@ -706,6 +864,7 @@ elif "Create Content" in selected_nav:
 elif "Evidence Review" in selected_nav:
     st.markdown("""
     <div class="app-header">
+        <div class="app-eyebrow">EDITORIAL VERIFICATION</div>
         <h1 class="app-title">Evidence Review & Traceability Workbench</h1>
         <p class="app-subtitle">Inspect source passages side-by-side with generated claims to verify metrics, quotes, and citations before publication.</p>
     </div>
@@ -734,7 +893,7 @@ elif "Evidence Review" in selected_nav:
 
             # Left Column: Canonical Passages
             with col_rev_l:
-                st.markdown("### 📄 Canonical Source Passages")
+                st.markdown("### Canonical Source Passages")
                 doc = DatabaseManager.get_source_document(selected_draft.document_id)
                 if doc and doc.passages:
                     st.caption(f"Document: **{doc.title}** (Version {doc.version})")
@@ -750,7 +909,7 @@ elif "Evidence Review" in selected_nav:
 
             # Right Column: Claims & Evidence
             with col_rev_r:
-                st.markdown(f"### 🔍 Factual Claims ({selected_draft.platform.upper()})")
+                st.markdown(f"### Grounded Factual Claims ({selected_draft.platform.upper()})")
                 st.markdown(f"Current Review Status: **{selected_draft.review_status.upper()}**")
 
                 if selected_draft.claims:
@@ -772,14 +931,14 @@ elif "Evidence Review" in selected_nav:
                                 for f in claim.flag_reasons:
                                     st.error(f"Flagged: {f}")
 
-                            st.markdown("<hr style='margin: 0.5rem 0; border: none; border-top: 1px solid #f1f5f9;'/>", unsafe_allow_html=True)
+                            st.markdown("<hr style='margin: 0.5rem 0; border: none; border-top: 1px solid #e7e4dc;'/>", unsafe_allow_html=True)
 
                     st.markdown("### Human Editorial Decision")
                     rev_notes = st.text_input("Reviewer Notes / Justification", placeholder="e.g. Verified metrics match Q3 financial results.")
                     
                     c_app1, c_app2 = st.columns(2)
                     with c_app1:
-                        if st.button("✅ Approve Content Draft", type="primary", use_container_width=True):
+                        if st.button("Approve Content Draft", type="primary", use_container_width=True):
                             ok, msg = DatabaseManager.update_draft_status(
                                 selected_draft.id,
                                 "approved",
@@ -790,7 +949,7 @@ elif "Evidence Review" in selected_nav:
                                 st.success("Draft approved and logged to audit trail.")
                                 st.rerun()
                     with c_app2:
-                        if st.button("↩️ Reopen for Revision", use_container_width=True):
+                        if st.button("Reopen for Revision", use_container_width=True):
                             ok, msg = DatabaseManager.update_draft_status(
                                 selected_draft.id,
                                 "reopened",
@@ -845,7 +1004,7 @@ elif "Content Library" in selected_nav:
     with col_exp1:
         csv_data = ExportService.to_csv(filtered_drafts)
         st.download_button(
-            label="📥 Export Filtered Drafts (CSV)",
+            label="Export Filtered Drafts (CSV)",
             data=csv_data,
             file_name=f"sourcewise_drafts_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
@@ -854,7 +1013,7 @@ elif "Content Library" in selected_nav:
     with col_exp2:
         json_data = ExportService.to_json(filtered_drafts)
         st.download_button(
-            label="📥 Export Filtered Drafts (JSON)",
+            label="Export Filtered Drafts (JSON)",
             data=json_data,
             file_name=f"sourcewise_drafts_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
             mime="application/json",
@@ -890,7 +1049,7 @@ elif "Content Library" in selected_nav:
                             st.success("No changes made.")
 
                 with col_lib2:
-                    if st.button("🗑️ Delete Draft", key=f"lib_del_{draft.id}"):
+                    if st.button("Delete Draft", key=f"lib_del_{draft.id}"):
                         DatabaseManager.delete_content_draft(draft.id)
                         st.warning("Draft deleted.")
                         st.rerun()
@@ -903,6 +1062,7 @@ elif "Content Library" in selected_nav:
 elif "Brand Settings" in selected_nav:
     st.markdown("""
     <div class="app-header">
+        <div class="app-eyebrow">BRAND GOVERNANCE</div>
         <h1 class="app-title">Brand Voice & Governance Settings</h1>
         <p class="app-subtitle">Configure multi-brand guidelines, forbidden terminology, mandatory disclaimers, and platform constraints.</p>
     </div>
@@ -946,7 +1106,7 @@ elif "Brand Settings" in selected_nav:
         b_disclaimer = st.text_area("Required Disclaimer", value=current_b.required_disclaimer or "")
         b_hashtags = st.text_input("Default Hashtags", value=current_b.hashtag_preferences or "")
 
-        save_brand_btn = st.form_submit_button("💾 Save Brand Profile Settings", type="primary")
+        save_brand_btn = st.form_submit_button("Save Brand Profile Settings", type="primary")
 
     if save_brand_btn:
         pref_list = [p.strip() for p in b_pref.split(",") if p.strip()]
@@ -967,7 +1127,7 @@ elif "Brand Settings" in selected_nav:
 
         ok, msg = DatabaseManager.save_brand_profile(updated_brand)
         if ok:
-            st.success("Brand profile saved successfully!")
+            st.success("Brand profile saved successfully.")
             st.rerun()
         else:
             st.error(f"Failed to save brand profile: {msg}")
@@ -980,24 +1140,25 @@ elif "Brand Settings" in selected_nav:
 elif "Engine & Settings" in selected_nav or "System" in selected_nav:
     st.markdown("""
     <div class="app-header">
+        <div class="app-eyebrow">SYSTEM & ENGINE CONFIGURATION</div>
         <h1 class="app-title">Engine & Application Settings</h1>
         <p class="app-subtitle">Configure AI model credentials, inspect local SQLite database tables, and manage application preferences.</p>
     </div>
     """, unsafe_allow_html=True)
 
     # Section 1: Database Health & Diagnostics
-    st.markdown("### 💾 Local Database Storage")
+    st.markdown("### Local Database Storage")
     is_cfg = is_database_configured()
     db_path = get_database_path()
 
     if is_cfg:
         ok_conn, conn_msg = DatabaseManager.check_connection()
         if ok_conn:
-            st.success(f"**Database Status:** {conn_msg}")
+            st.markdown(f'<div class="sw-advisory-card"><div class="sw-advisory-title">Database Storage Status</div><div class="sw-advisory-body">{conn_msg}</div></div>', unsafe_allow_html=True)
         else:
-            st.error(f"**Connection Error:** {conn_msg}")
+            st.error(f"Connection Error: {conn_msg}")
     else:
-        st.warning("Database persistence is disabled. Operating in Temporary Session Mode.")
+        st.markdown('<div class="sw-advisory-card"><div class="sw-advisory-title">Database Status</div><div class="sw-advisory-body">Operating in Temporary Session Mode.</div></div>', unsafe_allow_html=True)
 
     # SQLite Diagnostics
     st.markdown("#### Storage Diagnostics")
@@ -1024,20 +1185,25 @@ elif "Engine & Settings" in selected_nav or "System" in selected_nav:
     with c_diag3:
         st.metric("Foreign Key Cascades", fk_status_label)
 
-    st.caption(f"📁 **Database File Path:** `{db_path if db_path else ':memory:'}`")
+    st.caption(f"Database File Path: `{db_path if db_path else ':memory:'}`")
 
     # Cloud Ephemeral Storage Advisory Note
-    st.info(
-        "ℹ️ **Cloud Deployment Advisory (Streamlit Community Cloud):**\n\n"
-        "SQLite writes to local disk (`data/sourcewise.db`). When deployed on **Streamlit Community Cloud**, "
-        "the local filesystem is container-based. Any data saved to SQLite will persist during "
-        "active user sessions, but will reset if the cloud container reboots, sleeps, or redeploys. "
-        "For an offline, self-contained internship demonstration with zero paid infrastructure, SQLite provides complete reliability with no external network latency."
+    st.markdown(
+        """
+        <div class="sw-advisory-card">
+            <div class="sw-advisory-title">Storage Persistence Architecture</div>
+            <div class="sw-advisory-body">
+                SQLite writes directly to local storage at <code>data/sourcewise.db</code>. On Streamlit Community Cloud,
+                records persist throughout active user sessions. To ensure reproducible audits, all foreign keys and cascades are enforced on every database connection.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
     col_db1, col_db2 = st.columns(2)
     with col_db1:
-        if st.button("🔄 Test Database Connection Now", use_container_width=True):
+        if st.button("Test Database Connection", use_container_width=True):
             DatabaseManager.reset_engine()
             ok, msg = DatabaseManager.check_connection()
             if ok:
@@ -1046,7 +1212,7 @@ elif "Engine & Settings" in selected_nav or "System" in selected_nav:
                 st.error(msg)
 
     with col_db2:
-        if st.button("🛠️ Initialize / Verify Schema Tables", use_container_width=True):
+        if st.button("Initialize / Verify Schema Tables", use_container_width=True):
             ok, msg = DatabaseManager.init_db()
             if ok:
                 st.success(msg)
@@ -1056,7 +1222,7 @@ elif "Engine & Settings" in selected_nav or "System" in selected_nav:
     st.markdown("---")
 
     # Section 2: AI Provider Settings
-    st.markdown("### ⚡ Google Gemini AI Configuration")
+    st.markdown("### AI Provider & Model Configuration")
     gemini_active = is_gemini_configured()
     current_model = get_gemini_model()
 
@@ -1068,11 +1234,11 @@ elif "Engine & Settings" in selected_nav or "System" in selected_nav:
         st.metric("Gemini API Key", key_status)
 
     if gemini_active:
-        st.success(f"Google Gemini AI is active using model `{current_model}`.")
+        st.markdown(f'<div class="sw-advisory-card"><div class="sw-advisory-title">Active AI Engine</div><div class="sw-advisory-body">Google Gemini AI is active using model <code>{current_model}</code>.</div></div>', unsafe_allow_html=True)
     else:
-        st.info("Operating in Demo Mode (deterministic rule-based generation).")
+        st.markdown('<div class="sw-advisory-card"><div class="sw-advisory-title">Active AI Engine</div><div class="sw-advisory-body">Operating in deterministic rule-based mode. Configure <code>GEMINI_API_KEY</code> to enable live generation.</div></div>', unsafe_allow_html=True)
 
-    with st.expander("📖 Instructions to Configure Gemini API"):
+    with st.expander("Instructions to Configure Gemini API"):
         st.markdown("""
         To enable real Gemini AI generation:
         1. Obtain an API key from [Google AI Studio](https://aistudio.google.com/).
@@ -1089,7 +1255,7 @@ elif "Engine & Settings" in selected_nav or "System" in selected_nav:
         """)
 
     st.markdown("---")
-    st.markdown("### 🧹 Session Reset")
+    st.markdown("### Session Reset")
     if st.button("Clear Session State & Reload"):
         st.session_state.clear()
         st.success("Session state cleared.")

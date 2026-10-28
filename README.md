@@ -1,7 +1,7 @@
 # SourceWise AI — AI-Powered Social Content Repurposing and Evidence Traceability
 
 [![Live Application](https://img.shields.io/badge/Live%20Application-Streamlit%20Cloud-FF4B4B?logo=streamlit&logoColor=white)](https://sourcewise-966dabijbokkjrawyhng9t.streamlit.app/)
-[![Test Suite](https://img.shields.io/badge/pytest-41%20passed-success)](tests/)
+[![Test Suite](https://img.shields.io/badge/pytest-45%20passed-success)](tests/)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.14-blue)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-red)](https://streamlit.io)
 [![Database](https://img.shields.io/badge/Database-SQLite%203-blue)](https://sqlite.org)
@@ -27,7 +27,7 @@ Unlike typical conversational AI chatbots that fabricate assertions and hallucin
 | **Brand Governance** | Generic unstructured prompts | Algorithmic enforcement of banned terms, preferred vocabulary, CTAs, and disclaimers |
 | **Approval Integrity** | Fleeting session chat history | Audited state machine (`draft` → `in_review` → `approved` → `reopened`) in SQLite |
 | **Edit Safety** | Editing retains false verified status | Editing approved content **automatically resets approval status** to `reopened` |
-| **UI Experience** | Cluttered status banners and raw debug info | **Clean modern SaaS interface** with quiet inline feedback and zero credential leakage |
+| **UI Experience** | Cluttered generic dashboards, emoji navigation, status banners | **Bespoke editorial publishing workbench** on warm paper canvas, custom desk navigation, and zero diagnostic noise |
 
 ---
 

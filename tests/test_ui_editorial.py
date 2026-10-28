@@ -59,3 +59,4 @@ def test_editorial_masthead_and_palette():
     assert "#faf8f5" in content  # Warm paper canvas
     assert "#1b4332" in content  # Forest green accent
     assert "#c25e46" in content  # Muted terracotta accent
+

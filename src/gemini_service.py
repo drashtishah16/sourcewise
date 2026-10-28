@@ -75,7 +75,8 @@ class GeminiGenerator:
         try:
             from google import genai
             from google.genai import types
-            client = genai.Client(api_key=resolved_key)
+            clean_key = resolved_key.strip().strip("'\"")
+            client = genai.Client(api_key=clean_key)
         except Exception as client_err:
             safe_msg = sanitize_ai_error(client_err)
             raise GeminiGenerationError(f"Failed to initialize Google GenAI client: {safe_msg}")
@@ -209,8 +210,19 @@ REQUIRED JSON OUTPUT FORMAT:
             )
         except Exception as api_err:
             safe_msg = sanitize_ai_error(api_err)
-            logger.error("Gemini API call failed: %s", safe_msg)
-            raise GeminiGenerationError(f"Gemini API request failed ({model_name}): {safe_msg}")
+            if ("not found" in safe_msg.lower() or "404" in safe_msg) and "1.5-flash" not in model_name:
+                try:
+                    logger.warning("Model %s not found, attempting fallback to gemini-1.5-flash", model_name)
+                    response = client.models.generate_content(
+                        model="gemini-1.5-flash",
+                        contents=user_prompt,
+                        config=config
+                    )
+                except Exception as fb_err:
+                    raise GeminiGenerationError(f"Gemini API request failed: {sanitize_ai_error(fb_err)}")
+            else:
+                logger.error("Gemini API call failed: %s", safe_msg)
+                raise GeminiGenerationError(f"Gemini API request failed ({model_name}): {safe_msg}")
 
         # Parse response JSON
         raw_text = response.text if hasattr(response, "text") and response.text else "{}"

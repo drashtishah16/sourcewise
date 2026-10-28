@@ -28,13 +28,19 @@ def get_secret_or_env(key: str, default: Optional[str] = None) -> Optional[str]:
         if hasattr(st, "secrets") and st.secrets is not None and key in st.secrets:
             val = st.secrets[key]
             if val is not None and str(val).strip():
-                return str(val).strip()
+                clean_val = str(val).strip()
+                if (clean_val.startswith('"') and clean_val.endswith('"')) or (clean_val.startswith("'") and clean_val.endswith("'")):
+                    clean_val = clean_val[1:-1].strip()
+                return clean_val
     except Exception:
         pass
 
     env_val = os.getenv(key)
     if env_val is not None and env_val.strip():
-        return env_val.strip()
+        clean_env = env_val.strip()
+        if (clean_env.startswith('"') and clean_env.endswith('"')) or (clean_env.startswith("'") and clean_env.endswith("'")):
+            clean_env = clean_env[1:-1].strip()
+        return clean_env
 
     return default
 

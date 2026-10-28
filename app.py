@@ -154,9 +154,19 @@ st.markdown("""
         cursor: pointer !important;
         border: 1px solid transparent !important;
     }
-    /* Hide the native radio circle completely */
-    div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child {
+    /* Hide the native radio circle completely across all Streamlit versions */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label > div:first-child,
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child,
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] [role="radiogroup"] label > div:first-child,
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] [role="radiogroup"] label input,
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-of-type,
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] svg {
         display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
     /* Navigation Item Typography */
     div[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p {
@@ -468,6 +478,9 @@ def init_session_state():
     if "source_text" not in st.session_state:
         st.session_state.source_text = ""
 
+    # Auto-initialize SQLite schema tables on application startup
+    DatabaseManager.init_db()
+
     # Ensure at least 1 default brand profile exists
     existing_brands = DatabaseManager.list_brand_profiles()
     if not existing_brands:
@@ -721,6 +734,11 @@ elif "Create Content" in selected_nav:
         col_b1, col_b2 = st.columns(2)
         with col_b1:
             brand_profiles = DatabaseManager.list_brand_profiles()
+            if not brand_profiles:
+                default_brand = BrandProfileSchema(**SAMPLE_BRAND_PROFILE, is_default=True)
+                DatabaseManager.save_brand_profile(default_brand)
+                brand_profiles = [default_brand]
+
             brand_options = {p.id: f"{p.name} ({p.tone_of_voice})" for p in brand_profiles}
             selected_b_id = st.selectbox(
                 "Brand Profile",
@@ -788,13 +806,22 @@ elif "Create Content" in selected_nav:
                     st.success(f"Generated {len(gen_result.drafts)} drafts. ({gen_result.message})")
 
             except GeminiGenerationError as ge:
-                logger.error("Gemini generation failed: %s", str(ge))
-                st.error("Content generation is temporarily unavailable. Please try again.")
+                safe_detail = sanitize_ai_error(str(ge))
+                logger.error("Gemini generation failed: %s", safe_detail)
+                st.error(f"AI Content Generation Failed: {safe_detail}")
+                st.info("Tip: Verify your GEMINI_API_KEY in Streamlit Cloud Secrets (or Google AI Studio quota). You can also generate using the built-in deterministic rule-based engine below.")
+                if st.button("Generate with Rule-Based Engine (Demo Mode)", key="fallback_demo_btn", type="primary"):
+                    fallback_res = LLMProviderInterface.generate(doc, brand, selected_platforms, force_demo=True)
+                    st.session_state.active_drafts = fallback_res.drafts
+                    for d in fallback_res.drafts:
+                        DatabaseManager.save_content_draft(d)
+                    st.rerun()
             except SourceProcessingError as spe:
                 st.error(f"Source Document Issue: {str(spe)}")
             except Exception as e:
-                logger.error("Unexpected generation error: %s", sanitize_ai_error(str(e)))
-                st.error("Content generation is temporarily unavailable. Please try again.")
+                safe_err = sanitize_ai_error(str(e))
+                logger.error("Unexpected generation error: %s", safe_err)
+                st.error(f"Generation Error: {safe_err}")
 
     # Display generated draft cards
     if st.session_state.active_drafts:

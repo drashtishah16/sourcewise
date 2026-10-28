@@ -646,6 +646,37 @@ class DatabaseManager:
                 logger.error("Failed to log review event: %s", str(e))
 
     @classmethod
+    def list_review_events(cls, draft_id: Optional[str] = None) -> List[ReviewEventSchema]:
+        """Retrieves audit review events, optionally filtered by draft_id."""
+        if not cls.is_persistent():
+            events = _MEMORY_STORE.review_events
+            if draft_id:
+                events = [e for e in events if e.draft_id == draft_id]
+            return sorted(events, key=lambda x: x.timestamp)
+
+        engine = cls.get_engine()
+        if not engine:
+            return []
+        with Session(engine) as session:
+            stmt = select(ReviewEventModel)
+            if draft_id:
+                stmt = stmt.where(ReviewEventModel.draft_id == draft_id)
+            stmt = stmt.order_by(ReviewEventModel.timestamp.asc())
+            rows = session.scalars(stmt).all()
+            return [
+                ReviewEventSchema(
+                    id=r.id,
+                    draft_id=r.draft_id,
+                    previous_status=r.previous_status,
+                    new_status=r.new_status,
+                    actor=r.actor,
+                    notes=r.notes,
+                    timestamp=r.timestamp
+                )
+                for r in rows
+            ]
+
+    @classmethod
     def delete_content_draft(cls, draft_id: str) -> Tuple[bool, str]:
         if not cls.is_persistent():
             if draft_id in _MEMORY_STORE.drafts:

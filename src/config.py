@@ -114,13 +114,32 @@ def is_database_configured() -> bool:
         return False
     return True
 
+def get_gemini_api_key() -> Optional[str]:
+    """Returns the Gemini API key from Streamlit secrets or environment variables."""
+    return get_secret_or_env("GEMINI_API_KEY")
+
+def get_gemini_model() -> str:
+    """
+    Returns the configured Gemini model name.
+    Defaults to the verified stable Flash model 'gemini-2.5-flash'.
+    Can be overridden via GEMINI_MODEL or AI_MODEL_NAME.
+    """
+    return get_secret_or_env("GEMINI_MODEL") or get_secret_or_env("AI_MODEL_NAME") or "gemini-2.5-flash"
+
+def is_gemini_configured() -> bool:
+    """Returns True if a valid GEMINI_API_KEY is configured and FORCE_DEMO_MODE is not true."""
+    key = get_gemini_api_key()
+    force_demo = get_secret_or_env("FORCE_DEMO_MODE", "false").lower() in ("true", "1", "yes")
+    return bool(key) and not force_demo
+
 def get_ai_credentials() -> Dict[str, Optional[str]]:
     """Returns configured AI provider API keys. Never fabricates keys."""
     return {
+        "gemini": get_gemini_api_key(),
+        "gemini_model": get_gemini_model(),
         "openai": get_secret_or_env("OPENAI_API_KEY"),
-        "gemini": get_secret_or_env("GEMINI_API_KEY"),
         "anthropic": get_secret_or_env("ANTHROPIC_API_KEY"),
-        "model_name": get_secret_or_env("AI_MODEL_NAME", "gpt-4o-mini")
+        "model_name": get_gemini_model()
     }
 
 def is_connected_mode_available() -> bool:
@@ -128,11 +147,10 @@ def is_connected_mode_available() -> bool:
     Connected mode requires at least one genuine AI provider API key.
     If none is found, returns False.
     """
-    creds = get_ai_credentials()
     force_demo = get_secret_or_env("FORCE_DEMO_MODE", "false").lower() in ("true", "1", "yes")
     if force_demo:
         return False
-    return bool(creds["openai"] or creds["gemini"] or creds["anthropic"])
+    return is_gemini_configured() or bool(get_secret_or_env("OPENAI_API_KEY")) or bool(get_secret_or_env("ANTHROPIC_API_KEY"))
 
 def get_app_env() -> str:
     """Returns current environment ('development' or 'production')."""

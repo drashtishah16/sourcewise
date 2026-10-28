@@ -17,7 +17,8 @@ from src.models import (
 )
 from src.evidence_engine import EvidenceAuditor, STATUS_EVIDENCE_LINKED
 from src.brand_engine import BrandEngine
-from src.config import is_connected_mode_available, get_ai_credentials
+from src.config import is_connected_mode_available, get_ai_credentials, is_gemini_configured, get_gemini_model
+from src.gemini_service import GeminiGenerator, GeminiGenerationError
 
 PLATFORM_LINKEDIN = "linkedin"
 PLATFORM_INSTAGRAM = "instagram"
@@ -289,8 +290,10 @@ class DemoGenerator:
 
 class LLMProviderInterface:
     """
-    Extensible interface for external LLM integrations (OpenAI, Gemini, Anthropic).
-    Safely degrades to DemoGenerator when credentials are not available.
+    Interface for AI content generation.
+    Uses Google Gemini as the primary AI provider when GEMINI_API_KEY is configured.
+    When GEMINI_API_KEY is not configured, supports deterministic DemoGenerator.
+    Crucially: NEVER silently falls back to Demo Mode if a configured Gemini API call fails.
     """
 
     @classmethod
@@ -298,41 +301,34 @@ class LLMProviderInterface:
         cls,
         document: SourceDocumentSchema,
         brand_profile: BrandProfileSchema,
-        selected_platforms: List[str]
+        selected_platforms: List[str],
+        force_demo: bool = False
     ) -> GenerationResult:
         """
-        Attempts Connected Mode if API keys are configured;
-        Otherwise reliably uses DemoGenerator.
-        Never fabricates AI outputs or credentials.
+        Executes content generation.
+        If Gemini is configured and force_demo is False, calls GeminiGenerator.
+        If Gemini call fails, raises GeminiGenerationError (does not silently hide error).
         """
-        if not is_connected_mode_available():
-            # Honest fallback
-            drafts = DemoGenerator.generate_all(document, brand_profile, selected_platforms)
+        if is_gemini_configured() and not force_demo:
+            model = get_gemini_model()
+            # Raises GeminiGenerationError on API or network failure
+            drafts = GeminiGenerator.generate_all(
+                document=document,
+                brand_profile=brand_profile,
+                selected_platforms=selected_platforms,
+                model_name=model
+            )
             return GenerationResult(
                 drafts=drafts,
-                mode_used="demo",
-                message="Generated using deterministic rule-based engine (Demo Mode — No AI API Required)."
+                mode_used="gemini",
+                message=f"Generated via Google Gemini ({model})."
             )
 
-        # If connected mode is configured with API keys in future:
-        try:
-            creds = get_ai_credentials()
-            # If an actual key is present, a provider client would be called here.
-            # If network error or timeout occurs, fallback gracefully to Demo Mode.
-            drafts = DemoGenerator.generate_all(document, brand_profile, selected_platforms)
-            for d in drafts:
-                d.generation_mode = "connected"
-            return GenerationResult(
-                drafts=drafts,
-                mode_used="connected",
-                message=f"Generated via Connected Mode (Provider: {creds.get('model_name')})."
-            )
-        except Exception as e:
-            # Safe degradation
-            drafts = DemoGenerator.generate_all(document, brand_profile, selected_platforms)
-            return GenerationResult(
-                drafts=drafts,
-                mode_used="demo",
-                message=f"Connected provider error ({str(e)}). Safely fell back to deterministic Demo Mode."
-            )
+        # Fallback to deterministic Demo Mode when no key is configured or explicitly requested
+        drafts = DemoGenerator.generate_all(document, brand_profile, selected_platforms)
+        return GenerationResult(
+            drafts=drafts,
+            mode_used="demo",
+            message="Generated using deterministic rule-based engine."
+        )
 

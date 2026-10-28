@@ -43,16 +43,23 @@ SourceWise AI uses deterministic rules for **grounding and verification**, ensur
 
 ---
 
-## 4. How Demo Mode Works Without an API Key
+## 4. How Demo Mode & Real Gemini AI Integration Work
 
-To ensure the internship assessment project is 100% testable, gradeable, and deployable without forcing the user to purchase API keys:
-1. `DemoGenerator` acts as a deterministic content transformation engine.
-2. It segments the incoming source text, selects key information-dense sentences across problem context, technical implementation, and measured outcomes, and adapts them into platform-tailored structures:
-   - **LinkedIn**: Executive summary, structured bullet points citing `[S1]` and `[S2]`, professional CTA, and technical hashtags.
-   - **Instagram**: High-energy opening hook, mobile-formatted bullet takeaways, visual swipe CTA, and curated hashtag block.
-   - **Video Script**: Structured 60-second retention script with timestamped pacing (`[0:00 - 0:05 | Hook]`, `[0:05 - 0:20 | Context]`, `[0:20 - 0:40 | Mechanism]`, `[0:40 - 0:55 | Result]`), audio narration cues, and visual direction overlays.
-3. The UI clearly labels output with `Demo Mode — No AI API Required` to maintain complete transparency.
-4. `LLMProviderInterface` provides a clean plug-in interface for external providers (OpenAI, Gemini, Anthropic) if credentials are added later.
+### Real Gemini AI Generation (Google GenAI SDK)
+1. **Official SDK**: SourceWise AI integrates with Google Gemini using the official `google-genai` Python SDK (`Client.models.generate_content`).
+2. **Model Selection**: Default configured model is `gemini-2.5-flash`, the official verified stable Flash model endpoint optimized for speed, structured outputs, and high throughput.
+3. **Structured JSON Output**: Gemini is prompted with strict JSON schema instructions and `response_mime_type="application/json"`. It returns the full social post, the headline hook, and explicit claim mappings.
+4. **Mandatory Post-Generation Verification**: An AI-generated output is **never blindly assumed to be factual**. After Gemini returns a draft:
+   - Each claim is audited by `EvidenceAuditor` against the canonical passages (`[S1]`, `[S2]`).
+   - If Gemini invents a metric, alters a date, or cites a non-existent passage, the claim is flagged with `Requires Human Review` and assigned `Potentially Unsupported`.
+   - Brand guidelines are checked by `BrandEngine` to ensure forbidden terms were not introduced.
+5. **No Silent Fallback**: If a live Gemini API call fails (network timeout, invalid key, rate limit), the error is masked for safety and reported cleanly to the user. The system **never silently falls back to Demo Mode**, ensuring absolute transparency.
+
+### Fallback Demo Mode Without an API Key
+To ensure the project remains runnable offline without requiring API keys:
+1. `DemoGenerator` acts as a deterministic transformation engine.
+2. It segments source text and constructs platform-tailored posts with verified passage citations.
+3. The UI allows testing all 6 SaaS views and exports without requiring any API tokens or cloud connections.
 
 ---
 

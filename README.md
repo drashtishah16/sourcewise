@@ -1,12 +1,13 @@
 # SourceWise AI — AI-Powered Social Content Repurposing and Evidence Traceability
 
-[![Test Suite](https://img.shields.io/badge/pytest-38%20passed-success)](tests/)
+[![Test Suite](https://img.shields.io/badge/pytest-41%20passed-success)](tests/)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.14-blue)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-red)](https://streamlit.io)
 [![Database](https://img.shields.io/badge/Database-SQLite%203-blue)](https://sqlite.org)
+[![AI Engine](https://img.shields.io/badge/AI%20Engine-Google%20Gemini%20Flash-orange)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey)](LICENSE)
 
-SourceWise AI is an enterprise-grade technical content repurposing system designed to transform long-form whitepapers, architecture case studies, and engineering blog posts into high-performing social drafts for **LinkedIn**, **Instagram**, and **Short-form Video Scripts (TikTok / Reels / Shorts)**.
+SourceWise AI is an enterprise-grade technical content repurposing system designed to transform long-form whitepapers, architecture case studies, and engineering blog posts into high-performing social drafts for **LinkedIn**, **Instagram**, and **Short-form Video Scripts (TikTok / Reels / Shorts)** using **Google Gemini AI** (`gemini-2.5-flash`).
 
 Unlike typical conversational AI chatbots that fabricate assertions and hallucinate statistics, SourceWise AI is built around a rigorous **Evidence Traceability Engine**. Every factual assertion in an output draft is pinned to immutable, canonical source passages (`[S1]`, `[S2]`, `[S3]...`), validated against the source text, audited for ungrounded numbers/percentages/dates, and subjected to independent human editorial review before approval.
 
@@ -18,11 +19,12 @@ Unlike typical conversational AI chatbots that fabricate assertions and hallucin
 | :--- | :--- | :--- |
 | **Factual Grounding** | Plausible hallucinations, fabricated citations | Canonical passage mapping (`S1`, `S2`, `S3...`) with exact character offsets |
 | **Metric Verification** | Invented percentages, altered benchmarks | Automated detection of unverified numbers, percentages, dates, and quotes |
-| **API Key Requirement** | Fails or blocks without paid API tokens | **100% Functional Demo Mode** out of the box (zero API key or network required) |
+| **AI Engine** | Generic prompts with hallucinated citations | **Google Gemini AI (`google-genai` SDK)** with strict JSON schema and evidence constraints |
+| **API Key Flexibility** | Fails or blocks without paid API tokens | **100% Functional Demo Mode** fallback when API keys are unconfigured |
 | **Brand Governance** | Generic unstructured prompts | Algorithmic enforcement of banned terms, preferred vocabulary, CTAs, and disclaimers |
 | **Approval Integrity** | Fleeting session chat history | Audited state machine (`draft` → `in_review` → `approved` → `reopened`) in SQLite |
 | **Edit Safety** | Editing retains false verified status | Editing approved content **automatically resets approval status** to `reopened` |
-| **Epistemic Honesty** | Claims to know real-world "truth" | Clarifies that checks verify **consistency with provided text**, not absolute truth |
+| **UI Experience** | Cluttered status banners and raw debug info | **Clean modern SaaS interface** with quiet inline feedback and zero credential leakage |
 
 ---
 
@@ -34,7 +36,7 @@ sourcewise-ai/
 ├── .gitignore                  # Strict exclusion of virtualenvs, secrets, data/, and logs
 ├── README.md                   # Comprehensive architectural and operator documentation
 ├── INTERVIEW_GUIDE.md          # Technical assessment design rationale and defense
-├── requirements.txt            # Production dependencies (Streamlit, SQLAlchemy, Pydantic)
+├── requirements.txt            # Production dependencies (Streamlit, SQLAlchemy, google-genai)
 ├── schema.sql                  # SQLite DDL schema with constraints, FKs, and indices
 ├── app.py                      # Main 6-view Streamlit SaaS web application
 ├── data/                       # Local SQLite database storage (data/sourcewise.db, gitignored)
@@ -47,7 +49,8 @@ sourcewise-ai/
 │   ├── source_processor.py     # Source text segmentation, passage labeling, injection defense
 │   ├── evidence_engine.py      # Core evidence auditor, metric verification, status labeling
 │   ├── brand_engine.py         # Brand voice compliance, forbidden terms, length checks
-│   ├── generator.py            # Deterministic DemoEngine & modular Connected LLM interface
+│   ├── generator.py            # AI Generation coordinator & deterministic DemoGenerator
+│   ├── gemini_service.py       # Google Gemini SDK service with structured JSON & citation rules
 │   ├── database.py             # SQLite manager with foreign key cascades & session fallback
 │   ├── export_service.py       # RFC 4180 CSV & structured JSON export generation
 │   └── sample_data.py          # Pre-configured fictional case study & default brand profile
@@ -57,7 +60,7 @@ sourcewise-ai/
     ├── test_source_processor.py# Tests for segmentation, empty inputs, limits, versioning
     ├── test_evidence_engine.py # Tests for passage IDs, unverified numbers, quotes, dates
     ├── test_brand_engine.py    # Tests for brand rules, CTAs, disclaimers, length limits
-    ├── test_generator.py       # Tests for deterministic output, platform rules, fallbacks
+    ├── test_generator.py       # Tests for Demo & Gemini AI generation, error masking, live calls
     ├── test_database.py        # Tests for SQLite CRUD, foreign keys, resets, persistence
     ├── test_exports.py         # Tests for CSV/JSON formatting, Unicode, credential safety
     └── test_app_smoke.py       # End-to-end integration pipeline smoke test
@@ -163,29 +166,34 @@ Open your browser at `http://localhost:8501`.
 
 ## 🧪 Automated Test Suite Breakdown
 
-SourceWise AI includes 38 comprehensive automated unit and integration tests covering every core capability:
+SourceWise AI includes 42 comprehensive automated unit and integration tests covering every core capability:
 
 | Test Module | Coverage Scope | Tests |
 | :--- | :--- | :---: |
 | [`test_source_processor.py`](tests/test_source_processor.py) | Empty/whitespace inputs, minimum/maximum limits, passage splitting, sequential IDs (`S1`, `S2`), version incrementing on change, prompt injection defense | 6 |
 | [`test_evidence_engine.py`](tests/test_evidence_engine.py) | Valid passage linking, invalid passage ID rejection, unsupported metrics/percentages, unverified dates, fabricated quotes, missing citations, sentence classifier, disclaimer notice | 8 |
 | [`test_brand_engine.py`](tests/test_brand_engine.py) | Forbidden terminology detection, preferred term check, mandatory disclaimer presence, CTA verification, platform length limits, compliance scoring | 6 |
-| [`test_generator.py`](tests/test_generator.py) | LinkedIn/Instagram/Video draft generation, platform formatting differences, deterministic reproducibility, safe fallback in absence of LLM keys | 4 |
+| [`test_generator.py`](tests/test_generator.py) | Demo generation across platforms, formatting rules, deterministic output, safe fallback, Gemini mock generation with JSON schema & claim audit, error sanitation, live API skip guard | 8 |
 | [`test_database.py`](tests/test_database.py) | Default SQLite configuration, session fallback, brand CRUD, credential masking, source/passage hierarchy, approval reset on edit, review event auditing, SQLite foreign key cascades, and disk file persistence across engine reconnections | 9 |
 | [`test_exports.py`](tests/test_exports.py) | RFC 4180 CSV escaping, structured JSON schema, Unicode/quotes/newlines handling, empty collections, credential leak prevention | 4 |
 | [`test_app_smoke.py`](tests/test_app_smoke.py) | End-to-end integration test: Source Input → Passage Extraction → Demo Generation → Evidence Audit → Brand Check → Storage → Approval → CSV/JSON Export | 1 |
-| **Total** | **All 38 Tests Passing** | **38** |
+| **Total** | **All 41 Automated Tests Passing (1 Live API Skip Guard)** | **42** |
 
 ---
 
-## ☁️ Streamlit Community Cloud Deployment & Persistence Caveat
+## ☁️ Streamlit Community Cloud Deployment
 
 To deploy SourceWise AI to Streamlit Community Cloud:
 
 1. Push this repository to GitHub (e.g., `https://github.com/drashtishah16/sourcewise.git`).
 2. Log into [share.streamlit.io](https://share.streamlit.io).
 3. Click **New app**, select your repository (`drashtishah16/sourcewise`), branch (`main`), and set the main file path to `app.py`.
-4. Click **Deploy**. The app runs with zero external database configuration!
+4. (Optional) In **Advanced Settings** → **Secrets**, add your Gemini credentials:
+   ```toml
+   GEMINI_API_KEY = "your-google-ai-studio-api-key"
+   GEMINI_MODEL = "gemini-2.5-flash"
+   ```
+5. Click **Deploy**. The application boots cleanly with zero external database configuration!
 
 > [!WARNING]
 > **Cloud Ephemeral Disk Storage Advisory**:

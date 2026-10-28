@@ -1,7 +1,7 @@
 """
 SourceWise AI — Main Streamlit Application.
 AI-Powered Social Content Repurposing and Evidence Traceability.
-Provides 6 SaaS-style workflows:
+Provides 6 SaaS workflows:
 1. Workspace
 2. Create Content
 3. Evidence Review
@@ -9,9 +9,11 @@ Provides 6 SaaS-style workflows:
 5. Brand Settings
 6. System Settings
 """
+import logging
 import streamlit as st
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+from sqlalchemy import text
 
 from src.models import (
     SourceDocumentSchema,
@@ -21,6 +23,7 @@ from src.models import (
 )
 from src.source_processor import SourceProcessor, SourceProcessingError
 from src.generator import DemoGenerator, LLMProviderInterface, SUPPORTED_PLATFORMS
+from src.gemini_service import GeminiGenerator, GeminiGenerationError, sanitize_ai_error
 from src.evidence_engine import EvidenceAuditor, STATUS_EVIDENCE_LINKED, STATUS_POTENTIALLY_UNSUPPORTED
 from src.brand_engine import BrandEngine
 from src.database import DatabaseManager
@@ -32,30 +35,111 @@ from src.sample_data import (
     SAMPLE_ARTICLE_TEXT,
     SAMPLE_BRAND_PROFILE
 )
-from src.config import is_database_configured, is_connected_mode_available, get_ai_credentials, get_database_path
-from sqlalchemy import text
+from src.config import (
+    is_database_configured,
+    is_connected_mode_available,
+    get_ai_credentials,
+    get_database_path,
+    is_gemini_configured,
+    get_gemini_model,
+    get_gemini_api_key
+)
+
+logger = logging.getLogger(__name__)
 
 # Page configuration
 st.set_page_config(
     page_title="SourceWise AI — Content Repurposing & Evidence Traceability",
-    page_icon="🔍",
+    page_icon="◈",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom SaaS Styling (Clean white/navy/teal aesthetic)
+# Custom SaaS Styling (Clean, professional, high-contrast palette)
 st.markdown("""
 <style>
-    /* Main container and font styles */
+    /* Global Layout & Typography */
     .main {
         background-color: #f8fafc;
         color: #0f172a;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     
-    /* Top app header */
+    /* Sidebar Styling */
+    div[data-testid="stSidebar"] {
+        background-color: #ffffff;
+        border-right: 1px solid #e2e8f0;
+    }
+    
+    .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0rem 1.25rem 0rem;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 1.25rem;
+    }
+    .brand-avatar {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #ffffff;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    }
+    .brand-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+    }
+    .brand-tagline {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 500;
+        margin-top: 1px;
+    }
+
+    /* Modern Navigation Radio Tabs */
+    div[data-testid="stSidebar"] .stRadio > div {
+        gap: 0.25rem;
+    }
+    div[data-testid="stSidebar"] .stRadio label {
+        display: flex;
+        align-items: center;
+        padding: 0.6rem 0.85rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #334155;
+        transition: all 0.15s ease-in-out;
+        cursor: pointer;
+    }
+    div[data-testid="stSidebar"] .stRadio label:hover {
+        background-color: #f1f5f9;
+        color: #0f172a;
+    }
+    /* Hide native radio circles */
+    div[data-testid="stSidebar"] .stRadio label > div:first-child {
+        display: none !important;
+    }
+    /* Active Navigation State */
+    div[data-testid="stSidebar"] .stRadio label:has(input:checked) {
+        background-color: #eff6ff;
+        color: #1d4ed8;
+        font-weight: 600;
+        border-left: 3px solid #2563eb;
+    }
+
+    /* Top Page Header */
     .app-header {
-        padding: 1.25rem 0rem 1rem 0rem;
+        padding: 0.5rem 0rem 1.25rem 0rem;
         border-bottom: 1px solid #e2e8f0;
         margin-bottom: 1.5rem;
     }
@@ -64,17 +148,16 @@ st.markdown("""
         font-weight: 700;
         color: #0f172a;
         margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        letter-spacing: -0.025em;
     }
     .app-subtitle {
         font-size: 0.95rem;
         color: #475569;
-        margin-top: 0.25rem;
+        margin-top: 0.35rem;
+        line-height: 1.4;
     }
 
-    /* Cards */
+    /* Card Containers */
     .saas-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
@@ -84,7 +167,7 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
     .saas-card-header {
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         font-weight: 600;
         color: #0f172a;
         margin-bottom: 0.75rem;
@@ -109,50 +192,59 @@ st.markdown("""
     .badge-info { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
     .badge-neutral { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
 
-    /* Metric cards */
+    /* Metric Cards */
     .metric-box {
         background: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
-        padding: 1rem 1.25rem;
+        padding: 1.1rem 1.25rem;
         text-align: left;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
     }
     .metric-value {
-        font-size: 1.75rem;
+        font-size: 1.85rem;
         font-weight: 700;
         color: #0f172a;
+        line-height: 1.1;
     }
     .metric-label {
-        font-size: 0.85rem;
-        font-weight: 500;
+        font-size: 0.825rem;
+        font-weight: 600;
         color: #64748b;
-        margin-top: 0.2rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.4rem;
     }
 
-    /* Passage box */
+    /* Canonical Passage Box */
     .passage-box {
-        background-color: #f8fafc;
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
         border-left: 3px solid #0284c7;
-        padding: 0.75rem 1rem;
+        padding: 0.85rem 1rem;
         border-radius: 0 6px 6px 0;
         margin-bottom: 0.75rem;
         font-size: 0.9rem;
+        line-height: 1.5;
     }
     .passage-id {
         font-weight: 700;
         color: #0284c7;
         margin-bottom: 0.25rem;
+        font-size: 0.85rem;
     }
 
-    /* Scope notice banner */
+    /* Traceability Scope Notice */
     .scope-notice {
-        background-color: #f0f9ff;
-        border: 1px solid #bae6fd;
-        border-radius: 6px;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-left: 3px solid #64748b;
+        border-radius: 4px;
         padding: 0.75rem 1rem;
         font-size: 0.85rem;
-        color: #0369a1;
-        margin-bottom: 1rem;
+        color: #475569;
+        margin-bottom: 1.25rem;
+        line-height: 1.5;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -191,65 +283,49 @@ init_session_state()
 
 
 # ==============================================================================
-# SIDEBAR NAVIGATION & SYSTEM HEALTH BADGES
+# SIDEBAR NAVIGATION (POLISHED SAAS INTERFACE)
 # ==============================================================================
 
 with st.sidebar:
-    st.markdown("### 🔍 **SourceWise AI**")
-    st.caption("Content Repurposing & Evidence Traceability")
-    st.markdown("---")
+    st.markdown("""
+    <div class="sidebar-brand">
+        <div class="brand-avatar">S</div>
+        <div>
+            <div class="brand-title">SourceWise AI</div>
+            <div class="brand-tagline">Traceable Content Repurposing</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     page = st.radio(
         "Navigation",
         [
-            "🏠 Workspace",
-            "✨ Create Content",
-            "🔬 Evidence Review",
-            "📚 Content Library",
-            "🎯 Brand Settings",
-            "⚙️ System Settings"
+            "Workspace",
+            "Create Content",
+            "Evidence Review",
+            "Content Library",
+            "Brand Settings",
+            "System Settings"
         ],
-        index=0
+        index=0,
+        label_visibility="collapsed"
     )
 
-    st.markdown("---")
-    st.markdown("#### **System Status**")
-
-    # AI Status
-    if is_connected_mode_available():
-        st.markdown('<span class="badge badge-success">⚡ Connected Mode (LLM API)</span>', unsafe_allow_html=True)
-    else:
-        st.markdown('<span class="badge badge-info">🟢 Demo Mode (No AI API Required)</span>', unsafe_allow_html=True)
-
-    # Database Status
-    db_connected, db_msg = DatabaseManager.check_connection()
-    if db_connected:
-        st.markdown('<span class="badge badge-success">💾 SQLite Connected</span>', unsafe_allow_html=True)
-    else:
-        st.markdown('<span class="badge badge-warning">⚠️ Session Memory (Unpersisted)</span>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.caption("Internship Assessment Build • 2026")
+    st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
+    st.caption("SourceWise AI • Enterprise SaaS")
 
 
 # ==============================================================================
 # 1. WORKSPACE PAGE
 # ==============================================================================
 
-if page == "🏠 Workspace":
+if page == "Workspace":
     st.markdown("""
     <div class="app-header">
         <h1 class="app-title">Workspace Overview</h1>
         <p class="app-subtitle">Transform long-form technical content into evidence-grounded social posts with verifiable factual citations.</p>
     </div>
     """, unsafe_allow_html=True)
-
-    # System status banner
-    if not is_connected_mode_available():
-        st.info("ℹ️ **Active Mode: Demo Mode (No AI API Required)** — Generating deterministic, platform-adapted drafts using source text extraction, brand rules, and verifiable passage IDs. Zero API tokens required.")
-    
-    if not db_connected:
-        st.warning("⚠️ **Database Notice:** Running in Temporary Session Memory. To enable local SQLite persistence across restarts, check database settings in System Settings or `.env`.")
 
     # High-level Metrics
     all_drafts = DatabaseManager.list_content_drafts()
@@ -269,65 +345,74 @@ if page == "🏠 Workspace":
     with c2:
         st.markdown(f"""
         <div class="metric-box">
-            <div class="metric-value" style="color: #16a34a;">{approved_drafts}</div>
-            <div class="metric-label">Approved & Ready</div>
+            <div class="metric-value">{approved_drafts}</div>
+            <div class="metric-label">Approved Content</div>
         </div>
         """, unsafe_allow_html=True)
     with c3:
         st.markdown(f"""
         <div class="metric-box">
-            <div class="metric-value" style="color: #d97706;">{in_review_drafts}</div>
-            <div class="metric-label">Pending Human Review</div>
+            <div class="metric-value">{in_review_drafts}</div>
+            <div class="metric-label">Pending Reviews</div>
         </div>
         """, unsafe_allow_html=True)
     with c4:
         st.markdown(f"""
         <div class="metric-box">
-            <div class="metric-value" style="color: #0284c7;">{total_claims}</div>
-            <div class="metric-label">Audited Factual Claims</div>
+            <div class="metric-value">{total_claims}</div>
+            <div class="metric-label">Verified Claims</div>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
 
-    # Quick start banner
-    col_cta1, col_cta2 = st.columns([3, 1])
-    with col_cta1:
-        st.markdown("### Ready to repurpose technical content?")
-        st.write("Input a blog post, whitepaper, or case study to generate LinkedIn posts, Instagram captions, and short-form video scripts linked directly to source passages.")
-    with col_cta2:
-        st.write("")
-        if st.button("🚀 Start Repurposing Now", type="primary", use_container_width=True):
-            st.session_state["nav_goto"] = "✨ Create Content"
-            st.rerun()
+    # Quick Start Actions
+    col_act1, col_act2 = st.columns([2, 1])
+    with col_act1:
+        st.markdown("### Quick Start Workflow")
+        st.markdown("""
+        1. **Create Repurposed Content**: Ingest whitepapers or blogs, segment into numbered passages (`S1`, `S2`...), and generate platform-optimized social posts.
+        2. **Audit Evidence & Grounding**: Review citations side-by-side with source text. Ensure all statistics, benchmarks, and quotes match.
+        3. **Approve & Export**: Confirm brand compliance scores and export verified drafts to RFC 4180 CSV or structured JSON.
+        """)
+
+    with col_act2:
+        st.markdown("### Actions")
+        if st.button("✨ Repurpose Fictional Case Study", use_container_width=True, type="primary"):
+            st.session_state.source_title = SAMPLE_ARTICLE_TITLE
+            st.session_state.source_type = SAMPLE_ARTICLE_TYPE
+            st.session_state.source_url = SAMPLE_ARTICLE_URL
+            st.session_state.source_text = SAMPLE_ARTICLE_TEXT
+            st.success("Loaded NexusPay case study! Navigate to 'Create Content' to generate.")
+
+    st.markdown("---")
 
     # Recent drafts table
-    st.markdown("### Recent Content Drafts")
+    st.markdown("### Recent Repurposed Drafts")
     if all_drafts:
         for draft in all_drafts[:5]:
             with st.container():
-                cols = st.columns([1.5, 3.5, 1.5, 1.5, 1.5])
-                with cols[0]:
-                    st.markdown(f"**{draft.platform.upper()}**")
-                with cols[1]:
-                    st.write(draft.hook_title[:60] + "..." if len(draft.hook_title) > 60 else draft.hook_title)
-                with cols[2]:
+                c_d1, c_d2, c_d3, c_d4 = st.columns([3, 1, 1, 1])
+                with c_d1:
+                    st.markdown(f"**{draft.hook_title}**")
+                    st.caption(f"Platform: `{draft.platform.upper()}` • Mode: `{draft.generation_mode.upper()}`")
+                with c_d2:
                     badge_class = "badge-success" if draft.review_status == "approved" else "badge-warning"
                     st.markdown(f'<span class="badge {badge_class}">{draft.review_status}</span>', unsafe_allow_html=True)
-                with cols[3]:
-                    st.markdown(f"Claims: **{len(draft.claims)}**")
-                with cols[4]:
-                    st.caption(draft.created_at.strftime("%b %d, %H:%M") if draft.created_at else "Recent")
-                st.markdown("<hr style='margin: 0.5rem 0;'>", unsafe_allow_html=True)
+                with c_d3:
+                    st.write(f"Claims: **{len(draft.claims)}**")
+                with c_d4:
+                    st.write(f"Score: **{draft.compliance_score}/100**")
+                st.markdown("<hr style='margin: 0.5rem 0; border: none; border-top: 1px solid #f1f5f9;'/>", unsafe_allow_html=True)
     else:
-        st.info("No drafts created yet. Head to **Create Content** or click the quick-start button above to generate your first draft.")
+        st.info("No drafts created yet. Head to **Create Content** to repurpose your first source document.")
 
 
 # ==============================================================================
 # 2. CREATE CONTENT PAGE
 # ==============================================================================
 
-elif page == "✨ Create Content":
+elif page == "Create Content":
     st.markdown("""
     <div class="app-header">
         <h1 class="app-title">Create Repurposed Content</h1>
@@ -350,7 +435,7 @@ elif page == "✨ Create Content":
     with st.form("create_content_form"):
         col_t1, col_t2 = st.columns([3, 1])
         with col_t1:
-            title_input = st.text_input("Source Document Title*", value=st.session_state.source_title, placeholder="e.g. Scaling PostgreSQL with Multi-Tier Caching")
+            title_input = st.text_input("Source Document Title*", value=st.session_state.source_title, placeholder="e.g. Scaling Technical Architecture with Multi-Tier Caching")
         with col_t2:
             type_input = st.selectbox(
                 "Source Type",
@@ -368,7 +453,6 @@ elif page == "✨ Create Content":
             placeholder="Paste the approved text here (minimum 20 characters, up to 50,000 characters)..."
         )
 
-        # Word count calculation
         cur_words = len(text_input.split())
         cur_chars = len(text_input)
         st.caption(f"Input Statistics: **{cur_words} words** | **{cur_chars} characters**")
@@ -390,7 +474,15 @@ elif page == "✨ Create Content":
             cb_instagram = st.checkbox("Instagram Caption (Punchy hook & mobile spacing)", value=True)
             cb_video = st.checkbox("Short-form Video Script (TikTok / Reels / Shorts 60s)", value=True)
 
-        submitted = st.form_submit_button("🚀 Generate Repurposed Drafts", type="primary", use_container_width=True)
+        # Subtle helper line beside action
+        gemini_ready = is_gemini_configured()
+        if gemini_ready:
+            btn_label = f"✨ Generate Repurposed Drafts (Gemini AI: {get_gemini_model()})"
+        else:
+            btn_label = "🚀 Generate Repurposed Drafts"
+            st.caption("ℹ️ Configure `GEMINI_API_KEY` to enable real Gemini AI generation. Running with deterministic rules.")
+
+        submitted = st.form_submit_button(btn_label, type="primary", use_container_width=True)
 
     if submitted:
         selected_platforms = []
@@ -406,7 +498,7 @@ elif page == "✨ Create Content":
             st.error("Please select at least one target platform.")
         else:
             try:
-                with st.spinner("Processing source document and segmenting passages..."):
+                with st.spinner("Processing source document and generating evidence-grounded drafts..."):
                     doc = SourceProcessor.process_source(
                         title=title_input,
                         raw_text=text_input,
@@ -414,26 +506,37 @@ elif page == "✨ Create Content":
                         source_url=url_input
                     )
                     st.session_state.current_doc = doc
-                    DatabaseManager.save_source_document(doc)
+                    save_doc_ok, _ = DatabaseManager.save_source_document(doc)
 
                     # Retrieve brand profile
                     brand = DatabaseManager.get_brand_profile(selected_b_id)
                     if not brand:
                         brand = BrandProfileSchema(**SAMPLE_BRAND_PROFILE)
 
-                    # Generate drafts
+                    # Generate drafts via LLMProviderInterface (Gemini when configured, Demo otherwise)
                     gen_result = LLMProviderInterface.generate(doc, brand, selected_platforms)
                     st.session_state.active_drafts = gen_result.drafts
 
-                    # Auto-save generated drafts into library
+                    # Auto-save generated drafts into database
+                    saved_count = 0
                     for d in gen_result.drafts:
-                        DatabaseManager.save_content_draft(d)
+                        save_draft_ok, _ = DatabaseManager.save_content_draft(d)
+                        if save_draft_ok:
+                            saved_count += 1
 
-                st.success(f"Successfully generated {len(gen_result.drafts)} drafts! {gen_result.message}")
+                if saved_count == len(gen_result.drafts):
+                    st.success(f"Generated and saved {len(gen_result.drafts)} drafts successfully. ({gen_result.message})")
+                else:
+                    st.success(f"Generated {len(gen_result.drafts)} drafts. ({gen_result.message})")
+
+            except GeminiGenerationError as ge:
+                logger.error("Gemini generation failed: %s", str(ge))
+                st.error("Content generation is temporarily unavailable. Please try again.")
             except SourceProcessingError as spe:
-                st.error(f"Source Processing Error: {str(spe)}")
+                st.error(f"Source Document Issue: {str(spe)}")
             except Exception as e:
-                st.error(f"An unexpected error occurred during generation: {str(e)}")
+                logger.error("Unexpected generation error: %s", sanitize_ai_error(str(e)))
+                st.error("Content generation is temporarily unavailable. Please try again.")
 
     # Display generated draft cards
     if st.session_state.active_drafts:
@@ -459,75 +562,58 @@ elif page == "✨ Create Content":
                     f"Content ({draft.platform})",
                     value=draft.primary_content,
                     height=240,
-                    key=f"edit_{draft.id}"
+                    key=f"edit_draft_{draft.id}"
                 )
 
-                if draft.platform == "video_script" and draft.video_script:
-                    with st.expander("🎬 View Formatted Video Script & Visual Cue Board"):
-                        st.text(draft.video_script)
+                if st.button(f"Save Content Changes ({draft.platform.upper()})", key=f"save_btn_{draft.id}"):
+                    if edited_content != draft.primary_content:
+                        DatabaseManager.update_draft_content(draft.id, edited_content, reset_approval=True)
+                        draft.primary_content = edited_content
+                        draft.review_status = "reopened"
+                        st.info("Content updated. Review status reset to REOPENED for compliance safety.")
+                    else:
+                        st.success("No modifications detected.")
 
-                # Evidence summary for this draft
-                with st.expander("🔍 Linked Evidence & Passage Citations", expanded=True):
-                    for c in draft.claims:
-                        status_class = "badge-success" if c.evidence_status == STATUS_EVIDENCE_LINKED else "badge-danger"
-                        st.markdown(f"**Claim {c.claim_label}:** {c.claim_text}")
+                # Evidence & Claim Traceability Summary
+                st.markdown("##### Grounded Claims & Citations")
+                for c in draft.claims:
+                    status_class = "badge-success" if c.evidence_status == STATUS_EVIDENCE_LINKED else "badge-warning"
+                    with st.expander(f"{c.claim_label}: {c.claim_text[:90]}..."):
                         st.markdown(f"Referenced Passages: `{', '.join(c.referenced_passage_ids)}` | Status: <span class='badge {status_class}'>{c.evidence_status}</span>", unsafe_allow_html=True)
                         if c.supporting_excerpt:
                             st.caption(f"Supporting Excerpt: \"{c.supporting_excerpt}\"")
                         if c.flag_reasons:
                             for f in c.flag_reasons:
                                 st.warning(f"⚠️ {f}")
-                        st.markdown("<hr style='margin: 0.4rem 0;'>", unsafe_allow_html=True)
 
-                # Action row
-                col_a1, col_a2, col_a3, col_a4 = st.columns([1.5, 1.5, 1.5, 2])
-                with col_a1:
-                    if st.button("💾 Save Updates", key=f"save_{draft.id}"):
-                        ok, msg = DatabaseManager.update_draft_content(draft.id, edited_content)
-                        if ok:
-                            st.success("Draft updated!")
-                            st.rerun()
-                        else:
-                            st.error(f"Save failed: {msg}")
-
-                with col_a2:
-                    if st.button("✅ Approve Draft", key=f"app_{draft.id}", type="primary"):
-                        ok, msg = DatabaseManager.update_draft_status(draft.id, "approved", notes="Approved from Create view")
-                        if ok:
-                            st.success("Draft approved!")
-                            st.rerun()
-
-                with col_a3:
-                    if st.button("📋 Copy Text", key=f"copy_{draft.id}"):
+                # Quick action buttons
+                col_btn1, col_btn2 = st.columns(2)
+                with col_btn1:
+                    if st.button(f"✅ Approve Draft for {draft.platform.upper()}", key=f"app_{draft.id}", use_container_width=True):
+                        DatabaseManager.update_draft_status(draft.id, "approved", notes="Directly approved from Creator view.")
+                        draft.review_status = "approved"
+                        st.success(f"{draft.platform.upper()} draft approved!")
+                        st.rerun()
+                with col_btn2:
+                    if st.button(f"📋 Copy to Clipboard", key=f"copy_{draft.id}", use_container_width=True):
                         st.info("Content selected for copy. Use Ctrl+C inside the content area.")
-
-                with col_a4:
-                    single_csv = ExportService.to_csv([draft], st.session_state.current_doc)
-                    st.download_button(
-                        "📥 Export This Draft (CSV)",
-                        data=single_csv,
-                        file_name=f"{draft.platform}_draft_{draft.id}.csv",
-                        mime="text/csv",
-                        key=f"dl_{draft.id}"
-                    )
 
 
 # ==============================================================================
 # 3. EVIDENCE REVIEW PAGE
 # ==============================================================================
 
-elif page == "🔬 Evidence Review":
+elif page == "Evidence Review":
     st.markdown("""
     <div class="app-header">
         <h1 class="app-title">Evidence Review & Traceability Workbench</h1>
-        <p class="app-subtitle">Audit every factual assertion against immutable source passages to guarantee factual grounding.</p>
+        <p class="app-subtitle">Inspect source passages side-by-side with generated claims to verify metrics, quotes, and citations before publication.</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # Disclaimer scope banner
-    st.markdown(f"""
+    st.markdown("""
     <div class="scope-notice">
-        ℹ️ <strong>Evidence Traceability Scope:</strong> {EvidenceAuditor.get_disclaimer_note()}
+        <strong>Traceability Notice:</strong> SourceWise AI audits whether factual assertions directly reflect the provided source text passages. An 'Evidence Linked' status confirms textual alignment with the provided document; it does not independently certify external real-world truth.
     </div>
     """, unsafe_allow_html=True)
 
@@ -535,303 +621,271 @@ elif page == "🔬 Evidence Review":
     if not all_drafts:
         st.info("No content drafts available to audit. Generate drafts in the **Create Content** tab first.")
     else:
-        draft_options = {d.id: f"{d.platform.upper()} — {d.hook_title[:50]}... [{d.review_status}]" for d in all_drafts}
+        draft_options = {d.id: f"{d.platform.upper()} — {d.hook_title[:60]}... ({d.review_status})" for d in all_drafts}
         selected_draft_id = st.selectbox(
             "Select Draft to Audit",
             options=list(draft_options.keys()),
             format_func=lambda x: draft_options[x]
         )
+
         selected_draft = DatabaseManager.get_content_draft(selected_draft_id)
-        source_doc = DatabaseManager.get_source_document(selected_draft.document_id) if selected_draft else None
+        if selected_draft:
+            col_rev_l, col_rev_r = st.columns([1, 1])
 
-        col_left, col_right = st.columns([1, 1])
+            # Left Column: Canonical Passages
+            with col_rev_l:
+                st.markdown("### 📄 Canonical Source Passages")
+                doc = DatabaseManager.get_source_document(selected_draft.document_id)
+                if doc and doc.passages:
+                    st.caption(f"Document: **{doc.title}** (Version {doc.version})")
+                    for p in doc.passages:
+                        st.markdown(f"""
+                        <div class="passage-box">
+                            <div class="passage-id">[{p.passage_label}] Passage {p.passage_order}</div>
+                            {p.text}
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.warning("Source document passages not found for this draft.")
 
-        # Left Column: Source Passages
-        with col_left:
-            st.markdown("### 📄 Source Passages")
-            if source_doc and source_doc.passages:
-                st.caption(f"Document: **{source_doc.title}** (Version {source_doc.version})")
-                for p in source_doc.passages:
-                    st.markdown(f"""
-                    <div class="passage-box">
-                        <div class="passage-id">Passage {p.passage_label} (Offset {p.char_start}–{p.char_end})</div>
-                        {p.text}
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.warning("Source document passages not found for this draft.")
+            # Right Column: Claims & Evidence
+            with col_rev_r:
+                st.markdown(f"### 🔍 Factual Claims ({selected_draft.platform.upper()})")
+                st.markdown(f"Current Review Status: **{selected_draft.review_status.upper()}**")
 
-        # Right Column: Claims & Verification
-        with col_right:
-            st.markdown("### 🔎 Claim Audit Trail")
-            if selected_draft and selected_draft.claims:
-                for idx, claim in enumerate(selected_draft.claims):
-                    with st.container():
-                        st.markdown(f"#### **Claim {claim.claim_label}**")
-                        st.write(f"\"{claim.claim_text}\"")
+                if selected_draft.claims:
+                    for claim in selected_draft.claims:
+                        with st.container():
+                            st.markdown(f"**Claim {claim.claim_label}:** \"{claim.claim_text}\"")
+                            
+                            # Evidence status badge
+                            if claim.evidence_status == STATUS_EVIDENCE_LINKED:
+                                st.markdown(f'<span class="badge badge-success">Status: {claim.evidence_status}</span>', unsafe_allow_html=True)
+                            else:
+                                st.markdown(f'<span class="badge badge-danger">Status: {claim.evidence_status}</span>', unsafe_allow_html=True)
 
-                        # Evidence status badge
-                        if claim.evidence_status == STATUS_EVIDENCE_LINKED:
-                            st.markdown(f'<span class="badge badge-success">Status: {claim.evidence_status}</span>', unsafe_allow_html=True)
-                        else:
-                            st.markdown(f'<span class="badge badge-danger">Status: {claim.evidence_status}</span>', unsafe_allow_html=True)
+                            st.write(f"Referenced Passages: `{', '.join(claim.referenced_passage_ids)}`")
+                            if claim.supporting_excerpt:
+                                st.caption(f"Matched Excerpt: \"{claim.supporting_excerpt}\"")
+                            
+                            if claim.flag_reasons:
+                                for f in claim.flag_reasons:
+                                    st.error(f"Flagged: {f}")
 
-                        st.write(f"**Referenced Source Passages:** `{', '.join(claim.referenced_passage_ids)}`")
+                            st.markdown("<hr style='margin: 0.5rem 0; border: none; border-top: 1px solid #f1f5f9;'/>", unsafe_allow_html=True)
 
-                        if claim.supporting_excerpt:
-                            st.markdown(f"**Supporting Excerpt from Source:**\n> {claim.supporting_excerpt}")
-
-                        if claim.flag_reasons:
-                            st.markdown("**Automated Audit Warnings:**")
-                            for flag in claim.flag_reasons:
-                                st.error(f"⚠️ {flag}")
-
-                        # Reviewer note
-                        reviewer_input = st.text_input(
-                            f"Reviewer Notes for {claim.claim_label}",
-                            value=claim.reviewer_note or "",
-                            key=f"rev_note_{claim.id}"
-                        )
-                        st.markdown("<hr style='margin: 0.75rem 0;'>", unsafe_allow_html=True)
-
-                # Human approval decision
-                st.markdown("### 📋 Final Human Verification Decision")
-                st.caption("Human approval remains independent from automated algorithmic checks.")
-
-                col_dec1, col_dec2 = st.columns(2)
-                with col_dec1:
-                    approval_notes = st.text_input("Approval / Revision Notes", value=selected_draft.approval_notes or "")
-                    if st.button("✅ Approve Content Draft", type="primary", use_container_width=True):
-                        ok, msg = DatabaseManager.update_draft_status(selected_draft.id, "approved", notes=approval_notes, actor="human_reviewer")
-                        if ok:
-                            st.success("Draft marked as APPROVED!")
-                            st.rerun()
-                        else:
-                            st.error(f"Action failed: {msg}")
-
-                with col_dec2:
-                    st.write("")
-                    st.write("")
-                    if st.button("🔄 Request Revisions / Reopen", use_container_width=True):
-                        ok, msg = DatabaseManager.update_draft_status(selected_draft.id, "reopened", notes=approval_notes, actor="human_reviewer")
-                        if ok:
-                            st.info("Draft marked as REOPENED for revision.")
-                            st.rerun()
-                        else:
-                            st.error(f"Action failed: {msg}")
-            else:
-                st.info("No claims detected for this draft.")
+                    st.markdown("### Human Editorial Decision")
+                    rev_notes = st.text_input("Reviewer Notes / Justification", placeholder="e.g. Verified metrics match Q3 financial results.")
+                    
+                    c_app1, c_app2 = st.columns(2)
+                    with c_app1:
+                        if st.button("✅ Approve Content Draft", type="primary", use_container_width=True):
+                            ok, msg = DatabaseManager.update_draft_status(
+                                selected_draft.id,
+                                "approved",
+                                notes=rev_notes or "Approved by editor.",
+                                actor="editor"
+                            )
+                            if ok:
+                                st.success("Draft approved and logged to audit trail.")
+                                st.rerun()
+                    with c_app2:
+                        if st.button("↩️ Reopen for Revision", use_container_width=True):
+                            ok, msg = DatabaseManager.update_draft_status(
+                                selected_draft.id,
+                                "reopened",
+                                notes=rev_notes or "Reopened for revision.",
+                                actor="editor"
+                            )
+                            if ok:
+                                st.info("Draft marked as REOPENED for revision.")
+                                st.rerun()
+                else:
+                    st.info("No claims detected for this draft.")
 
 
 # ==============================================================================
 # 4. CONTENT LIBRARY PAGE
 # ==============================================================================
 
-elif page == "📚 Content Library":
+elif page == "Content Library":
     st.markdown("""
     <div class="app-header">
-        <h1 class="app-title">Content Library</h1>
-        <p class="app-subtitle">Search, filter, edit, and export your repurposed drafts and audit histories.</p>
+        <h1 class="app-title">Content Library & Exports</h1>
+        <p class="app-subtitle">Filter, edit, manage, and batch-export approved repurposed content assets.</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # Filters row
-    col_f1, col_f2, col_f3 = st.columns([2, 1.5, 1.5])
-    with col_f1:
-        search_kw = st.text_input("🔍 Search drafts", placeholder="Filter by keyword or title...")
-    with col_f2:
-        filter_platform = st.selectbox("Platform", ["All", "LinkedIn", "Instagram", "Video Script"])
-    with col_f3:
-        filter_status = st.selectbox("Status", ["All", "Draft", "In Review", "Approved", "Reopened"])
-
-    # Batch export buttons
     all_drafts = DatabaseManager.list_content_drafts()
 
+    # Filter Bar
+    c_f1, c_f2, c_f3 = st.columns(3)
+    with c_f1:
+        search_query = st.text_input("Search Drafts", placeholder="Search by hook or content...")
+    with c_f2:
+        platform_filter = st.selectbox("Filter Platform", ["All Platforms", "linkedin", "instagram", "video_script"])
+    with c_f3:
+        status_filter = st.selectbox("Filter Review Status", ["All Statuses", "draft", "in_review", "approved", "reopened"])
+
     # Apply filters
-    filtered = all_drafts
-    if filter_platform != "All":
-        p_map = {"LinkedIn": "linkedin", "Instagram": "instagram", "Video Script": "video_script"}
-        filtered = [d for d in filtered if d.platform.lower() == p_map[filter_platform]]
-    if filter_status != "All":
-        filtered = [d for d in filtered if d.review_status.lower() == filter_status.lower()]
-    if search_kw.strip():
-        kw = search_kw.strip().lower()
-        filtered = [d for d in filtered if kw in d.hook_title.lower() or kw in d.primary_content.lower()]
+    filtered_drafts = all_drafts
+    if platform_filter != "All Platforms":
+        filtered_drafts = [d for d in filtered_drafts if d.platform == platform_filter]
+    if status_filter != "All Statuses":
+        filtered_drafts = [d for d in filtered_drafts if d.review_status == status_filter]
+    if search_query.strip():
+        q = search_query.strip().lower()
+        filtered_drafts = [d for d in filtered_drafts if q in d.hook_title.lower() or q in d.primary_content.lower()]
 
-    st.markdown("---")
+    st.markdown(f"**Showing {len(filtered_drafts)} of {len(all_drafts)} drafts**")
 
-    col_exp1, col_exp2, col_exp3 = st.columns([2, 1.5, 1.5])
+    # Export Bar
+    st.markdown("### Batch Export")
+    col_exp1, col_exp2 = st.columns(2)
     with col_exp1:
-        st.write(f"Showing **{len(filtered)}** of **{len(all_drafts)}** total drafts.")
-    with col_exp2:
-        csv_data = ExportService.to_csv(filtered)
+        csv_data = ExportService.to_csv(filtered_drafts)
         st.download_button(
-            "📥 Export Library (CSV)",
+            label="📥 Export Filtered Drafts (CSV)",
             data=csv_data,
-            file_name=f"sourcewise_drafts_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+            file_name=f"sourcewise_drafts_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
             use_container_width=True
         )
-    with col_exp3:
-        json_data = ExportService.to_json(filtered)
+    with col_exp2:
+        json_data = ExportService.to_json(filtered_drafts)
         st.download_button(
-            "📥 Export Library (JSON)",
+            label="📥 Export Filtered Drafts (JSON)",
             data=json_data,
-            file_name=f"sourcewise_drafts_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            file_name=f"sourcewise_drafts_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
             mime="application/json",
             use_container_width=True
         )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("---")
 
-    if not filtered:
+    # Render Draft Cards
+    if not filtered_drafts:
         st.info("No drafts match your current filter settings.")
     else:
-        for draft in filtered:
-            with st.expander(f"{draft.platform.upper()} • {draft.hook_title[:60]}... [{draft.review_status.upper()}]"):
-                col_d1, col_d2 = st.columns([3, 1])
-                with col_d1:
-                    st.markdown(f"**Hook Title:** {draft.hook_title}")
-                    edited_body = st.text_area(
-                        "Primary Content",
-                        value=draft.primary_content,
-                        height=200,
-                        key=f"lib_edit_{draft.id}"
-                    )
-                    if draft.review_status == "approved":
-                        st.caption("⚠️ Note: Editing an approved draft will automatically reset its status to 'Reopened' for review.")
+        for draft in filtered_drafts:
+            with st.expander(f"{draft.platform.upper()} | {draft.hook_title} ({draft.review_status.upper()})"):
+                st.markdown(f"**Status:** `{draft.review_status.upper()}` | **Mode:** `{draft.generation_mode.upper()}` | **Score:** `{draft.compliance_score}/100`")
+                
+                # Content editor with safe approval invalidation
+                edited_text = st.text_area(
+                    "Edit Draft Content",
+                    value=draft.primary_content,
+                    height=200,
+                    key=f"lib_edit_{draft.id}"
+                )
 
-                with col_d2:
-                    st.markdown("**Draft Metadata**")
-                    st.write(f"Platform: `{draft.platform}`")
-                    st.write(f"Status: `{draft.review_status}`")
-                    st.write(f"Compliance: `{draft.compliance_score}/100`")
-                    st.write(f"Claims: `{len(draft.claims)}`")
-                    st.write(f"Created: {draft.created_at.strftime('%Y-%m-%d %H:%M') if draft.created_at else 'Recent'}")
-
-                col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1.5, 1.5])
-                with col_btn1:
-                    if st.button("💾 Save Edits", key=f"lib_save_{draft.id}"):
-                        ok, msg = DatabaseManager.update_draft_content(draft.id, edited_body)
-                        if ok:
-                            st.success("Draft updated! Approval status reset if previously approved.")
+                col_lib1, col_lib2 = st.columns(2)
+                with col_lib1:
+                    if st.button("Save & Safe Re-Audit", key=f"lib_save_{draft.id}"):
+                        if edited_text != draft.primary_content:
+                            DatabaseManager.update_draft_content(draft.id, edited_text, reset_approval=True)
+                            st.info("Draft content updated. Status reset to REOPENED for compliance safety.")
                             st.rerun()
                         else:
-                            st.error(f"Save error: {msg}")
+                            st.success("No changes made.")
 
-                with col_btn2:
-                    if draft.review_status != "approved":
-                        if st.button("✅ Approve", key=f"lib_app_{draft.id}", type="primary"):
-                            DatabaseManager.update_draft_status(draft.id, "approved", notes="Approved from Library")
-                            st.rerun()
-                    else:
-                        if st.button("🔄 Reopen", key=f"lib_reopen_{draft.id}"):
-                            DatabaseManager.update_draft_status(draft.id, "reopened", notes="Reopened from Library")
-                            st.rerun()
-
-                with col_btn3:
+                with col_lib2:
                     if st.button("🗑️ Delete Draft", key=f"lib_del_{draft.id}"):
-                        ok, msg = DatabaseManager.delete_content_draft(draft.id)
-                        if ok:
-                            st.warning("Draft deleted.")
-                            st.rerun()
+                        DatabaseManager.delete_content_draft(draft.id)
+                        st.warning("Draft deleted.")
+                        st.rerun()
 
 
 # ==============================================================================
 # 5. BRAND SETTINGS PAGE
 # ==============================================================================
 
-elif page == "🎯 Brand Settings":
+elif page == "Brand Settings":
     st.markdown("""
     <div class="app-header">
-        <h1 class="app-title">Brand Voice & Compliance Profiles</h1>
-        <p class="app-subtitle">Define brand guidelines, banned phrases, mandatory disclaimers, and platform length rules.</p>
+        <h1 class="app-title">Brand Voice & Governance Settings</h1>
+        <p class="app-subtitle">Configure multi-brand guidelines, forbidden terminology, mandatory disclaimers, and platform constraints.</p>
     </div>
     """, unsafe_allow_html=True)
 
-    profiles = DatabaseManager.list_brand_profiles()
-    profile_names = {p.id: p.name for p in profiles}
-    profile_names["new"] = "➕ Create New Brand Profile"
-
-    selected_id = st.selectbox(
-        "Select Profile to Manage",
-        options=list(profile_names.keys()),
-        format_func=lambda x: profile_names[x]
+    brands = DatabaseManager.list_brand_profiles()
+    brand_map = {b.id: b.name for b in brands}
+    
+    selected_b_id = st.selectbox(
+        "Select Brand Profile to Edit",
+        options=list(brand_map.keys()),
+        format_func=lambda x: brand_map[x]
     )
 
-    if selected_id == "new":
-        active_prof = BrandProfileSchema(name="New Brand Profile")
-    else:
-        active_prof = DatabaseManager.get_brand_profile(selected_id) or BrandProfileSchema(name="Default")
+    current_b = DatabaseManager.get_brand_profile(selected_b_id) if selected_b_id else None
+    if not current_b:
+        current_b = BrandProfileSchema(**SAMPLE_BRAND_PROFILE)
 
     with st.form("brand_profile_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            name_val = st.text_input("Brand Name*", value=active_prof.name)
-            audience_val = st.text_input("Target Audience", value=active_prof.target_audience)
-            tone_val = st.selectbox(
-                "Tone of Voice",
-                ["Authoritative & Technical", "Conversational & Friendly", "Direct & Provocative", "Executive & Strategic"],
-                index=0
-            )
-
-        with col2:
-            cta_val = st.text_input("Primary Call to Action (CTA)", value=active_prof.primary_cta)
-            hashtags_val = st.text_input("Default Hashtags", value=active_prof.hashtag_preferences)
-            disclaimer_val = st.text_area("Mandatory Disclaimer", value=active_prof.required_disclaimer, height=80)
-
-        st.markdown("---")
-        st.markdown("#### **Terminology Governance**")
-        pref_val = st.text_area(
-            "Preferred Terminology (comma-separated)",
-            value=", ".join(active_prof.preferred_terminology),
-            help="Keywords the content generator prioritizes weaving into drafts."
-        )
-        forbid_val = st.text_area(
-            "Forbidden Terminology (comma-separated)",
-            value=", ".join(active_prof.forbidden_terminology),
-            help="Banned words or risky phrases that automatically trigger compliance failures."
+        b_name = st.text_input("Brand Name*", value=current_b.name)
+        b_audience = st.text_input("Target Audience", value=current_b.target_audience)
+        b_tone = st.selectbox(
+            "Tone of Voice",
+            ["Professional", "Technical", "Authoritative", "Casual & Witty", "Direct & Concise"],
+            index=["Professional", "Technical", "Authoritative", "Casual & Witty", "Direct & Concise"].index(current_b.tone_of_voice) if current_b.tone_of_voice in ["Professional", "Technical", "Authoritative", "Casual & Witty", "Direct & Concise"] else 0
         )
 
-        submit_brand = st.form_submit_button("💾 Save Brand Profile", type="primary")
+        b_pref = st.text_area(
+            "Preferred Terminology (Comma-separated)",
+            value=", ".join(current_b.preferred_terminology),
+            help="Terms and phrases that the AI engine should prioritize using."
+        )
 
-    if submit_brand:
-        if not name_val.strip():
-            st.error("Brand name cannot be empty.")
+        b_forbid = st.text_area(
+            "Forbidden Terminology (Comma-separated)",
+            value=", ".join(current_b.forbidden_terminology),
+            help="Banned words, competitor names, or buzzwords that must NEVER appear in output."
+        )
+
+        b_cta = st.text_input("Default Call to Action (CTA)", value=current_b.primary_cta or "")
+        b_disclaimer = st.text_area("Required Disclaimer", value=current_b.required_disclaimer or "")
+        b_hashtags = st.text_input("Default Hashtags", value=current_b.hashtag_preferences or "")
+
+        save_brand_btn = st.form_submit_button("💾 Save Brand Profile Settings", type="primary")
+
+    if save_brand_btn:
+        pref_list = [p.strip() for p in b_pref.split(",") if p.strip()]
+        forbid_list = [f.strip() for f in b_forbid.split(",") if f.strip()]
+
+        updated_brand = BrandProfileSchema(
+            id=current_b.id,
+            name=b_name,
+            target_audience=b_audience,
+            tone_of_voice=b_tone,
+            preferred_terminology=pref_list,
+            forbidden_terminology=forbid_list,
+            primary_cta=b_cta,
+            required_disclaimer=b_disclaimer,
+            hashtag_preferences=b_hashtags,
+            is_default=current_b.is_default
+        )
+
+        ok, msg = DatabaseManager.save_brand_profile(updated_brand)
+        if ok:
+            st.success("Brand profile saved successfully!")
+            st.rerun()
         else:
-            preferred_list = [w.strip() for w in pref_val.split(",") if w.strip()]
-            forbidden_list = [w.strip() for w in forbid_val.split(",") if w.strip()]
-
-            active_prof.name = name_val.strip()
-            active_prof.target_audience = audience_val.strip()
-            active_prof.tone_of_voice = tone_val
-            active_prof.primary_cta = cta_val.strip()
-            active_prof.hashtag_preferences = hashtags_val.strip()
-            active_prof.required_disclaimer = disclaimer_val.strip()
-            active_prof.preferred_terminology = preferred_list
-            active_prof.forbidden_terminology = forbidden_list
-
-            ok, msg = DatabaseManager.save_brand_profile(active_prof)
-            if ok:
-                st.success(f"Profile saved! {msg}")
-                st.rerun()
-            else:
-                st.error(f"Save failed: {msg}")
+            st.error(f"Failed to save brand profile: {msg}")
 
 
 # ==============================================================================
 # 6. SYSTEM SETTINGS PAGE
 # ==============================================================================
 
-elif page == "⚙️ System Settings":
+elif page == "System Settings":
     st.markdown("""
     <div class="app-header">
         <h1 class="app-title">System Settings & Infrastructure Diagnostics</h1>
-        <p class="app-subtitle">Inspect local SQLite database status, monitor AI engine modes, and verify schema migrations.</p>
+        <p class="app-subtitle">Inspect local SQLite database status, monitor AI engine configuration, and verify schema migrations.</p>
     </div>
     """, unsafe_allow_html=True)
 
-    # Section 1: Database Health & Credentials
+    # Section 1: Database Health & Diagnostics
     st.markdown("### 💾 Local SQLite Persistent Storage")
     is_cfg = is_database_configured()
     db_path = get_database_path()
@@ -839,17 +893,14 @@ elif page == "⚙️ System Settings":
     if is_cfg:
         ok_conn, conn_msg = DatabaseManager.check_connection()
         if ok_conn:
-            st.success(f"✅ **Database Status:** {conn_msg}")
+            st.success(f"**Database Status:** {conn_msg}")
         else:
-            st.error(f"❌ **Connection Error:** {conn_msg}")
+            st.error(f"**Connection Error:** {conn_msg}")
     else:
-        st.warning(
-            "⚠️ **Database Disabled:** Operating in Temporary Session Mode. "
-            "Data will not persist across browser sessions until database is enabled."
-        )
+        st.warning("Database persistence is disabled. Operating in Temporary Session Mode.")
 
     # SQLite Diagnostics
-    st.markdown("#### 🔍 Storage Diagnostics")
+    st.markdown("#### Storage Diagnostics")
     c_diag1, c_diag2, c_diag3 = st.columns(3)
     engine = DatabaseManager.get_engine()
     table_count = 0
@@ -879,9 +930,9 @@ elif page == "⚙️ System Settings":
     st.info(
         "ℹ️ **Cloud Deployment Advisory (Streamlit Community Cloud):**\n\n"
         "SQLite writes to local disk (`data/sourcewise.db`). When deployed on **Streamlit Community Cloud**, "
-        "the local filesystem is ephemeral and container-based. Any data saved to SQLite will persist during "
+        "the local filesystem is container-based. Any data saved to SQLite will persist during "
         "active user sessions, but will reset if the cloud container reboots, sleeps, or redeploys. "
-        "For a zero-dependency portfolio demonstration, SQLite provides complete offline reliability with no external network latency."
+        "For an offline, self-contained internship demonstration with zero paid infrastructure, SQLite provides complete reliability with no external network latency."
     )
 
     col_db1, col_db2 = st.columns(2)
@@ -904,20 +955,38 @@ elif page == "⚙️ System Settings":
 
     st.markdown("---")
 
-    # Section 2: AI Engine Settings
-    st.markdown("### ⚡ AI Provider Configuration")
-    ai_creds = get_ai_credentials()
-    has_keys = is_connected_mode_available()
+    # Section 2: AI Provider Settings
+    st.markdown("### ⚡ Google Gemini AI Configuration")
+    gemini_active = is_gemini_configured()
+    current_model = get_gemini_model()
 
-    if has_keys:
-        st.success(f"Connected Mode Available: Model `{ai_creds['model_name']}` configured.")
+    c_ai1, c_ai2 = st.columns(2)
+    with c_ai1:
+        st.metric("Configured Model", current_model)
+    with c_ai2:
+        key_status = "Configured (Protected)" if gemini_active else "Not Configured"
+        st.metric("Gemini API Key", key_status)
+
+    if gemini_active:
+        st.success(f"Google Gemini AI is active using model `{current_model}`.")
     else:
-        st.info("🟢 **Demo Mode Active:** 100% deterministic, rule-based generation with zero API keys required.")
+        st.info("Operating in Demo Mode (deterministic rule-based generation).")
 
-    st.markdown("""
-    SourceWise AI is architected so that **no paid API key is ever required** to test, grade, or deploy the complete application.
-    If you wish to attach an external LLM later, configure `OPENAI_API_KEY` or `GEMINI_API_KEY` in your `.env` or Streamlit secrets.
-    """)
+    with st.expander("📖 Instructions to Configure Gemini API"):
+        st.markdown("""
+        To enable real Gemini AI generation:
+        1. Obtain an API key from [Google AI Studio](https://aistudio.google.com/).
+        2. In local development: Add to your local `.env` file:
+           ```bash
+           GEMINI_API_KEY="your-api-key-here"
+           GEMINI_MODEL="gemini-2.5-flash"
+           ```
+        3. In Streamlit Community Cloud: Go to **App Settings** → **Secrets**, and add:
+           ```toml
+           GEMINI_API_KEY = "your-api-key-here"
+           GEMINI_MODEL = "gemini-2.5-flash"
+           ```
+        """)
 
     st.markdown("---")
     st.markdown("### 🧹 Session Reset")
@@ -925,4 +994,3 @@ elif page == "⚙️ System Settings":
         st.session_state.clear()
         st.success("Session state cleared.")
         st.rerun()
-

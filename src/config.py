@@ -41,6 +41,10 @@ def get_database_url() -> Optional[str]:
         return None
 
     url = raw_url.strip()
+    # Strip wrapping quotes if user pasted string inside quotes in .env
+    if (url.startswith('"') and url.endswith('"')) or (url.startswith("'") and url.endswith("'")):
+        url = url[1:-1].strip()
+
     # Normalize legacy prefix
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://"):]
